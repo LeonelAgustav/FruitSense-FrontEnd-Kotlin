@@ -1,5 +1,6 @@
 package com.example.fruitsense.ui.screen.dashboard.profile
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -28,14 +29,13 @@ fun ProfileMenuScreen(
 ) {
     Column(
         modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
+            .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Profile Header
+        // 1. Profile Header
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(vertical = 20.dp)
+            modifier = Modifier.padding(vertical = 24.dp, horizontal = 24.dp)
         ) {
             Spacer(modifier = Modifier.height(25.dp))
 
@@ -43,7 +43,7 @@ fun ProfileMenuScreen(
                 text = "Profil Saya",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = FruitSenseColors.GreenOlive
+                color = MaterialTheme.colorScheme.onBackground
             )
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -51,117 +51,136 @@ fun ProfileMenuScreen(
             Text(
                 text = "Kelola informasi akun dan pengaturan aplikasi",
                 fontSize = 14.sp,
-                color = FruitSenseColors.GrayDark.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // --- PEMBATAS / DIVIDER ---
+        HorizontalDivider(
+            thickness = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f)
+        )
+        // --------------------------
 
-        // Account Information Section
+        // Konten di bawah Divider
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Foto Profile
-            Box(
+            // 2. Account Information Section
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Foto Profile
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.size(60.dp),
+                        tint = FruitSenseColors.GreenOlive.copy(alpha = 0.6f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Nama
+                Text(
+                    text = "John Doe",
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // Email
+                Text(
+                    text = "johndoe@email.com",
+                    fontSize = 20.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 3. Settings Section (Card dengan Border)
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Pengaturan",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = FruitSenseColors.GreenOlive,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    ProfileMenuItem(
+                        icon = Icons.Default.Notifications,
+                        title = "Notifikasi",
+                        subtitle = "Atur preferensi notifikasi",
+                        onClick = { onNotificationClick() },
+                    )
+
+                    // Divider tipis di dalam Card
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
+
+                    ProfileMenuItem(
+                        icon = Icons.Default.Settings,
+                        title = "Pengaturan Aplikasi",
+                        subtitle = "Bahasa, tema, dan lainnya",
+                        onClick = { onSettingsClick() },
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // 4. Logout Button
+            Button(
+                onClick = onLogoutClick,
                 modifier = Modifier
-                    .size(110.dp)
-                    .clip(CircleShape)
-                    .background(Color.LightGray.copy(alpha = 0.3f)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(56.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = FruitSenseColors.GreenDark,
+                    contentColor = FruitSenseColors.White
+                ),
+                shape = RoundedCornerShape(12.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Person,
-                    contentDescription = "Profile Picture",
-                    modifier = Modifier.size(60.dp),
-                    tint = FruitSenseColors.GreenOlive.copy(alpha = 0.6f)
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = "Logout",
+                    modifier = Modifier.size(24.dp)
                 )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Keluar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Nama
-            Text(
-                text = "John Doe",
-                fontSize = 25.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                textAlign = TextAlign.Center
-            )
-
-            Spacer(modifier = Modifier.height(4.dp))
-
-            // Email
-            Text(
-                text = "johndoe@email.com",
-                fontSize = 20.sp,
-                color = Color.Gray,
-                textAlign = TextAlign.Center
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Settings Section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White
-            ),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = "Pengaturan",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = FruitSenseColors.GreenOlive,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-
-                ProfileMenuItem(
-                    icon = Icons.Default.Notifications,
-                    title = "Notifikasi",
-                    subtitle = "Atur preferensi notifikasi",
-                    onClick = { onNotificationClick() },
-                )
-
-                Divider(color = Color.LightGray.copy(alpha = 0.3f))
-
-                ProfileMenuItem(
-                    icon = Icons.Default.Settings,
-                    title = "Pengaturan Aplikasi",
-                    subtitle = "Bahasa, tema, dan lainnya",
-                    onClick = { onSettingsClick() },
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Logout Button
-        Button(
-            onClick = onLogoutClick,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = FruitSenseColors.GreenDark,
-                contentColor = FruitSenseColors.White
-            ),
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ExitToApp,
-                contentDescription = "Logout",
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text("Keluar", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -177,7 +196,7 @@ fun ProfileMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -207,12 +226,12 @@ fun ProfileMenuItem(
                     text = title,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = FruitSenseColors.Black
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
                     fontSize = 12.sp,
-                    color = FruitSenseColors.Black
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -220,7 +239,7 @@ fun ProfileMenuItem(
         Icon(
             imageVector = Icons.Default.ChevronRight,
             contentDescription = "Navigate",
-            tint = FruitSenseColors.GrayDark.copy(alpha = 0.4f),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
             modifier = Modifier.size(24.dp)
         )
     }

@@ -4,22 +4,25 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
-import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
+import androidx.navigation.NavType
+import androidx.navigation.compose.*
+import androidx.navigation.navArgument
+import com.google.accompanist.permissions.*
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 object ScanScreenNavigation {
     const val HUB = "scan_hub"
     const val CAMERA = "scan_camera"
     const val PREVIEW = "scan_preview"
+    const val RESULT = "scan_result" // Rute baru
 }
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
-fun ScanScreen() {
+fun ScanScreen(
+    onShowBottomBar: (Boolean) -> Unit // Callback dari DashboardScreen
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
 
@@ -27,34 +30,40 @@ fun ScanScreen() {
         android.Manifest.permission.CAMERA
     )
 
-    // --- State baru untuk menyimpan URI yang dipilih ---
+    // State untuk menyimpan URI gambar sementara di memory
     var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
 
-    // --- Logika untuk MENANGANI HASIL GAMBAR (dari Kamera/Galeri) ---
-    // (Sekarang tugasnya hanya menyimpan URI dan pindah ke Preview)
+    // Mengontrol Visibilitas BottomBar berdasarkan Rute Navigasi
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute = navBackStackEntry?.destination?.route
+
+    LaunchedEffect(currentRoute) {
+        // Tampilkan BottomBar HANYA jika berada di HUB
+        val isHub = currentRoute == ScanScreenNavigation.HUB
+        onShowBottomBar(isHub)
+    }
+
+    // Handler saat gambar didapat (dari Kamera/Galeri)
     val handleImageResult: (Uri) -> Unit = { uri ->
-        // 1. Simpan Uri yang didapat
         selectedImageUri = uri
-        // 2. Pindah ke layar Preview
         navController.navigate(ScanScreenNavigation.PREVIEW)
     }
 
-    // --- Logika untuk MEMPROSES GAMBAR (setelah dikonfirmasi) ---
-    // (Ini adalah logika lama Anda, sekarang dipisah)
+    // Handler proses gambar akhir (Simulasi Analisa AI)
     val processImage = { uri: Uri ->
-        // TODO: Ganti Toast ini dengan logika upload ke NodeJS
-        Toast.makeText(context, "Gambar diproses: $uri", Toast.LENGTH_SHORT).show()
+        // Disini biasanya Anda melakukan upload ke server
+        // Setelah sukses, kita navigasi ke ResultScreen
 
-        // Setelah gambar diproses, kembali ke hub
-        navController.popBackStack(ScanScreenNavigation.HUB, inclusive = false)
+        // Encode URI agar aman dikirim lewat navigasi string URL
+        val encodedUri = URLEncoder.encode(uri.toString(), StandardCharsets.UTF_8.toString())
+        navController.navigate("${ScanScreenNavigation.RESULT}/$encodedUri")
     }
 
-    // --- NavHost Internal ---
     NavHost(
         navController = navController,
         startDestination = ScanScreenNavigation.HUB
     ) {
-
+        // 1. HUB SCREEN
         composable(ScanScreenNavigation.HUB) {
             ScanHubScreen(
                 onBukaKameraClick = {
@@ -64,40 +73,60 @@ fun ScanScreen() {
                         cameraPermissionState.launchPermissionRequest()
                     }
                 },
-                onImageSelected = handleImageResult // Panggil handler
+                onImageSelected = handleImageResult
             )
         }
 
+        // 2. CAMERA SCREEN
         composable(ScanScreenNavigation.CAMERA) {
             if (cameraPermissionState.status.isGranted) {
                 CameraScreen(
-                    onPhotoTaken = handleImageResult, // Panggil handler
+                    onPhotoTaken = handleImageResult,
                     onBack = { navController.popBackStack() }
                 )
             } else {
-                LaunchedEffect(Unit) {
-                    navController.popBackStack()
-                }
+                LaunchedEffect(Unit) { navController.popBackStack() }
             }
         }
 
-        // ⬇️ --- RUTE BARU UNTUK PREVIEW --- ⬇️
+        // 3. PREVIEW SCREEN
         composable(ScanScreenNavigation.PREVIEW) {
-            // Panggil Composable baru 'PreviewScreen'
-            // Pastikan URI tidak null sebelum menampilkannya
-            selectedImageUri?.let { uri ->
+            if (selectedImageUri != null) {
                 PreviewScreen(
-                    imageUri = uri,
+                    imageUri = selectedImageUri!!,
                     onConfirm = {
-                        // Panggil logika proses yang sebenarnya
-                        processImage(uri)
+                        // Panggil fungsi proses gambar -> Lanjut ke Result
+                        processImage(selectedImageUri!!)
                     },
-                    onCancel = {
-                        // Kembali ke layar hub
-                        navController.popBackStack()
-                    }
+                    onCancel = { navController.popBackStack() }
                 )
             }
+        }
+
+        // 4. RESULT SCREEN (Halaman Baru)
+        // Menerima argumen URI gambar
+        composable(
+            route = "${ScanScreenNavigation.RESULT}/{imageUri}",
+            arguments = listOf(navArgument("imageUri") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val uriString = backStackEntry.arguments?.getString("imageUri")
+            val imageUri = Uri.parse(uriString)
+
+            ResultScreen(
+                imageUri = imageUri,
+                // Data di bawah ini nantinya didapat dari API response
+                fruitName = "Jeruk Mandarin",
+                freshness = 88,
+                grade = "B",
+                onScanAgain = {
+                    // Kembali ke Hub dan bersihkan stack
+                    navController.popBackStack(ScanScreenNavigation.HUB, inclusive = false)
+                },
+                onSaveToInventory = {
+                    Toast.makeText(context, "Disimpan ke Inventory", Toast.LENGTH_SHORT).show()
+                    navController.popBackStack(ScanScreenNavigation.HUB, inclusive = false)
+                }
+            )
         }
     }
 }

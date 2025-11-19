@@ -67,4 +67,8 @@ dependencies {
     implementation("androidx.navigation:navigation-compose:2.7.7")
     implementation("com.google.mlkit:image-labeling:17.0.9")
     implementation("io.coil-kt:coil-compose:2.6.0")
+    // DataStore Preferences (Untuk menyimpan pengaturan tema)
+    implementation("androidx.datastore:datastore-preferences:1.0.0")
+    // ViewModel Compose (Biasanya sudah ada, tapi pastikan ini ada untuk manajemen state)
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.6.2")
 }

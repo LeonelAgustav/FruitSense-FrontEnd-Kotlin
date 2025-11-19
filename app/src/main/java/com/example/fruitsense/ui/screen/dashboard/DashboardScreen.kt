@@ -1,21 +1,17 @@
 package com.example.fruitsense.ui.screen.dashboard
 
+import androidx.compose.animation.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.fruitsense.ui.theme.FruitSenseColors
+import com.example.fruitsense.ui.theme.FruitSenseColors // Tidak lagi dipakai untuk background utama
 import com.example.fruitsense.ui.components.BottomNavigationBar
+import com.example.fruitsense.ui.screen.dashboard.history.HistoryScreen
+import com.example.fruitsense.ui.screen.dashboard.inventory.InventoryScreen
 import com.example.fruitsense.ui.screen.dashboard.profile.ProfileScreen
 import com.example.fruitsense.ui.screen.dashboard.scan.ScanScreen
 
@@ -27,34 +23,59 @@ fun DashboardScreen(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
 
+    // State untuk mengontrol visibilitas Navbar
+    var showBottomBar by remember { mutableStateOf(true) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(FruitSenseColors.White)
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Main Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 80.dp),
+                // Padding ini yang membuat konten berhenti sebelum navbar
+                // Area kosong di bawahnya akan mengikuti warna background Box di atas
+                .padding(bottom = if (showBottomBar) 80.dp else 0.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
             when (selectedTab) {
-                0 -> ScanScreen()
-                1 -> InventoryScreen()
-                2 -> HistoryScreen()
-                3 -> ProfileScreen(
-                    onLogout = onLogoutClick
+                0 -> ScanScreen(
+                    onShowBottomBar = { isVisible ->
+                        showBottomBar = isVisible
+                    }
                 )
+                1 -> {
+                    showBottomBar = true
+                    InventoryScreen()
+                }
+                2 -> {
+                    showBottomBar = true
+                    HistoryScreen()
+                }
+                3 -> {
+                    showBottomBar = true
+                    ProfileScreen(onLogout = onLogoutClick)
+                }
             }
         }
 
         // Bottom Navigation Bar
-        BottomNavigationBar(
-            selectedTab = selectedTab,
-            onTabSelected = { selectedTab = it },
+        AnimatedVisibility(
+            visible = showBottomBar,
+            enter = slideInVertically { it },
+            exit = slideOutVertically { it },
             modifier = Modifier.align(Alignment.BottomCenter)
-        )
+        ) {
+            BottomNavigationBar(
+                selectedTab = selectedTab,
+                onTabSelected = {
+                    selectedTab = it
+                    showBottomBar = true
+                }
+            )
+        }
     }
 }

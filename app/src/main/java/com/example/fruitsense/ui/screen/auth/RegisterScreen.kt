@@ -1,16 +1,16 @@
 package com.example.fruitsense.ui.screen.auth
 
+import androidx.compose.foundation.BorderStroke
 import com.example.fruitsense.ui.theme.FruitSenseColors
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Visibility
-import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,17 +29,24 @@ fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onRegisterSuccess: () -> Unit
 ) {
-    var fullName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
-    var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
+    var fullName by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var confirmPassword by rememberSaveable { mutableStateOf("") }
+    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    var confirmPasswordVisible by rememberSaveable { mutableStateOf(false) }
+
+    var fullNameError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            // Background adaptif
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -61,9 +68,14 @@ fun RegisterScreen(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = FruitSenseColors.White // Menggunakan warna dari object
+                    // Container Kartu adaptif
+                    containerColor = MaterialTheme.colorScheme.surface
                 ),
-                elevation = CardDefaults.cardElevation(8.dp)
+                elevation = CardDefaults.cardElevation(8.dp),
+                border = BorderStroke(
+                    width = 1.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                ),
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -73,44 +85,61 @@ fun RegisterScreen(
                         text = "Daftar",
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
-                        color = FruitSenseColors.GreenDark // Menggunakan warna dari object
+                        color = FruitSenseColors.GreenDark
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
+                    // --- NAMA LENGKAP ---
                     OutlinedTextField(
                         value = fullName,
-                        onValueChange = { fullName = it },
-                        label = { Text("Nama Lengkap", color = FruitSenseColors.GrayDark) },
+                        onValueChange = {
+                            fullName = it
+                            fullNameError = null
+                        },
+                        label = { Text("Nama Lengkap") },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Person,
                                 contentDescription = "Name",
-                                tint = FruitSenseColors.BrownDark // Menggunakan warna dari object
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FruitSenseColors.GreenDark, // Menggunakan warna dari object
-                            unfocusedBorderColor = FruitSenseColors.GrayDark,
-                            focusedLabelColor = FruitSenseColors.GreenDark
+                            focusedBorderColor = FruitSenseColors.GreenDark,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedLabelColor = FruitSenseColors.GreenDark,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            errorBorderColor = MaterialTheme.colorScheme.error,
+                            errorLabelColor = MaterialTheme.colorScheme.error
                         ),
-                        textStyle = TextStyle(color = FruitSenseColors.GrayDark)
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                        isError = fullNameError != null,
+                        supportingText = {
+                            if (fullNameError != null) {
+                                Text(text = fullNameError!!, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(if (fullNameError != null) 2.dp else 16.dp))
 
+                    // --- EMAIL ---
                     OutlinedTextField(
                         value = email,
-                        onValueChange = { email = it },
-                        label = { Text("Email", color = FruitSenseColors.GrayDark) },
+                        onValueChange = {
+                            email = it
+                            emailError = null
+                        },
+                        label = { Text("Email") },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Email,
                                 contentDescription = "Email",
-                                tint = FruitSenseColors.BrownDark // Menggunakan warna dari object
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         modifier = Modifier.fillMaxWidth(),
@@ -118,30 +147,44 @@ fun RegisterScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FruitSenseColors.GreenDark, // Menggunakan warna dari object
-                            unfocusedBorderColor = FruitSenseColors.GrayDark,
-                            focusedLabelColor = FruitSenseColors.GreenDark
+                            focusedBorderColor = FruitSenseColors.GreenDark,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedLabelColor = FruitSenseColors.GreenDark,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            errorBorderColor = MaterialTheme.colorScheme.error,
+                            errorLabelColor = MaterialTheme.colorScheme.error
                         ),
-                        textStyle = TextStyle(color = FruitSenseColors.GrayDark)
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                        isError = emailError != null,
+                        supportingText = {
+                            if (emailError != null) {
+                                Text(text = emailError!!, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(if (emailError != null) 2.dp else 16.dp))
 
+                    // --- PASSWORD ---
                     OutlinedTextField(
                         value = password,
-                        onValueChange = { password = it },
-                        label = { Text("Password", color = FruitSenseColors.GrayDark) },
+                        onValueChange = {
+                            password = it
+                            passwordError = null
+                            confirmPasswordError = null
+                        },
+                        label = { Text("Password") },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Lock,
                                 contentDescription = "Password",
-                                tint = FruitSenseColors.BrownDark // Menggunakan warna dari object
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         trailingIcon = {
                             val image = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
                             IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(imageVector = image, contentDescription = null, tint = FruitSenseColors.BrownDark)
+                                Icon(imageVector = image, contentDescription = "Toggle", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         },
                         visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -150,30 +193,43 @@ fun RegisterScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FruitSenseColors.GreenDark, // Menggunakan warna dari object
-                            unfocusedBorderColor = FruitSenseColors.GrayDark,
-                            focusedLabelColor = FruitSenseColors.GreenDark
+                            focusedBorderColor = FruitSenseColors.GreenDark,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedLabelColor = FruitSenseColors.GreenDark,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            errorBorderColor = MaterialTheme.colorScheme.error,
+                            errorLabelColor = MaterialTheme.colorScheme.error
                         ),
-                        textStyle = TextStyle(color = FruitSenseColors.GrayDark)
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                        isError = passwordError != null,
+                        supportingText = {
+                            if (passwordError != null) {
+                                Text(text = passwordError!!, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
                     )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(if (passwordError != null) 2.dp else 16.dp))
 
+                    // --- KONFIRMASI PASSWORD ---
                     OutlinedTextField(
                         value = confirmPassword,
-                        onValueChange = { confirmPassword = it },
-                        label = { Text("Konfirmasi Password", color = FruitSenseColors.GrayDark) },
+                        onValueChange = {
+                            confirmPassword = it
+                            confirmPasswordError = null
+                        },
+                        label = { Text("Konfirmasi Password") },
                         leadingIcon = {
                             Icon(
                                 Icons.Default.Lock,
                                 contentDescription = "Confirm Password",
-                                tint = FruitSenseColors.BrownDark // Menggunakan warna dari object
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         },
                         trailingIcon = {
                             val image = if (confirmPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
                             IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                                Icon(imageVector = image, contentDescription = null, tint = FruitSenseColors.BrownDark)
+                                Icon(imageVector = image, contentDescription = "Toggle", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         },
                         visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
@@ -182,18 +238,65 @@ fun RegisterScreen(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FruitSenseColors.GreenDark, // Menggunakan warna dari object
-                            unfocusedBorderColor = FruitSenseColors.GrayDark,
-                            focusedLabelColor = FruitSenseColors.GreenDark
+                            focusedBorderColor = FruitSenseColors.GreenDark,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
+                            focusedLabelColor = FruitSenseColors.GreenDark,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            errorBorderColor = MaterialTheme.colorScheme.error,
+                            errorLabelColor = MaterialTheme.colorScheme.error
                         ),
-                        textStyle = TextStyle(color = FruitSenseColors.GrayDark)
+                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
+                        isError = confirmPasswordError != null,
+                        supportingText = {
+                            if (confirmPasswordError != null) {
+                                Text(text = confirmPasswordError!!, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
                     )
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(if (confirmPasswordError != null) 2.dp else 24.dp))
 
                     Button(
                         onClick = {
-                            if (password == confirmPassword && fullName.isNotBlank() && email.isNotBlank()) {
+                            fullNameError = null
+                            emailError = null
+                            passwordError = null
+                            confirmPasswordError = null
+                            var hasError = false
+
+                            if (fullName.isBlank()) {
+                                fullNameError = "Nama lengkap tidak boleh kosong"
+                                hasError = true
+                            }
+                            if (email.isBlank()) {
+                                emailError = "Email tidak boleh kosong"
+                                hasError = true
+                            }
+                            else if (!android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
+                                emailError = "Format email tidak valid"
+                                hasError = true
+                            }
+
+                            if (password.isBlank()) {
+                                passwordError = "Password tidak boleh kosong"
+                                hasError = true
+                            }
+                            else if (password.length < 8) {
+                                passwordError = "Password minimal 8 karakter"
+                                hasError = true
+                            }
+
+                            if (confirmPassword.isBlank()) {
+                                confirmPasswordError = "Konfirmasi password tidak boleh kosong"
+                                hasError = true
+                            }
+
+                            if (!password.isBlank() && !confirmPassword.isBlank() && password != confirmPassword) {
+                                confirmPasswordError = "Password dan konfirmasi password tidak cocok"
+                                hasError = true
+                            }
+
+                            if (!hasError) {
                                 onRegisterSuccess()
                             }
                         },
@@ -202,14 +305,14 @@ fun RegisterScreen(
                             .height(56.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = FruitSenseColors.GreenDark // Menggunakan warna dari object
+                            containerColor = FruitSenseColors.GreenDark
                         )
                     ) {
                         Text(
                             text = "Daftar",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Bold,
-                            color = FruitSenseColors.White // Menggunakan warna dari object
+                            color = FruitSenseColors.White
                         )
                     }
 
@@ -221,13 +324,15 @@ fun RegisterScreen(
                     ) {
                         Text(
                             text = "Sudah punya akun? ",
-                            color = FruitSenseColors.GrayDark // Menggunakan warna dari object
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            fontSize = 16.sp
                         )
                         TextButton(onClick = onNavigateToLogin) {
                             Text(
                                 text = "Masuk",
-                                color = FruitSenseColors.GreenOlive, // Menggunakan warna dari object
-                                fontWeight = FontWeight.Bold
+                                color = FruitSenseColors.GreenOlive,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
                             )
                         }
                     }
