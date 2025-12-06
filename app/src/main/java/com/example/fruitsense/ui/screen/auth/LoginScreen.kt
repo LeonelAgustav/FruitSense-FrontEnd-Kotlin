@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,26 +18,26 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.fruitsense.R
 import com.example.fruitsense.ui.theme.FruitSenseColors
 
 @Composable
 fun LoginScreen(
     onNavigateToRegister: () -> Unit,
-    onLoginSuccess: () -> Unit
+    onLoginSuccess: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
+    viewModel: AuthViewModel = hiltViewModel() // Gunakan Hilt
 ) {
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var passwordVisible by rememberSaveable { mutableStateOf(false) }
+    val state by viewModel.loginState.collectAsState()
 
-    var emailError by remember { mutableStateOf<String?>(null) }
-    var passwordError by remember { mutableStateOf<String?>(null) }
-    var loginError by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(Unit) {
+        viewModel.clearLoginErrors()
+    }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            // Background adaptif (Putih/Hitam)
             .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
@@ -60,15 +59,9 @@ fun LoginScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(
-                    // Kartu adaptif (Surface)
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(8.dp),
-                border = BorderStroke(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
-                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
             ) {
                 Column(
                     modifier = Modifier.padding(24.dp),
@@ -83,174 +76,85 @@ fun LoginScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // --- INPUT EMAIL ---
+                    // Email
                     OutlinedTextField(
-                        value = email,
-                        onValueChange = {
-                            email = it
-                            emailError = null
-                            loginError = null
-                        },
-                        label = { Text("Email") }, // Warna label default adaptif
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Email,
-                                contentDescription = "Email",
-                                // Icon warna sekunder adaptif
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
+                        value = state.email,
+                        onValueChange = { viewModel.onLoginEvent(LoginEvent.EmailChanged(it)) },
+                        label = { Text("Email") },
+                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FruitSenseColors.GreenDark,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            focusedLabelColor = FruitSenseColors.GreenDark,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            errorBorderColor = MaterialTheme.colorScheme.error,
-                            errorLabelColor = MaterialTheme.colorScheme.error
-                        ),
-                        // Warna teks input adaptif
-                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
-                        isError = emailError != null,
-                        supportingText = {
-                            if (emailError != null) {
-                                Text(
-                                    text = emailError!!,
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                        }
+                        isError = state.emailError != null,
+                        supportingText = { if (state.emailError != null) Text(text = state.emailError!!) }
                     )
 
-                    Spacer(modifier = Modifier.height(if (emailError != null) 2.dp else 16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    // --- INPUT PASSWORD ---
+                    // Password
                     OutlinedTextField(
-                        value = password,
-                        onValueChange = {
-                            password = it
-                            passwordError = null
-                            loginError = null
-                        },
+                        value = state.password,
+                        onValueChange = { viewModel.onLoginEvent(LoginEvent.PasswordChanged(it)) },
                         label = { Text("Password") },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Lock,
-                                contentDescription = "Password",
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        },
+                        leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                         trailingIcon = {
-                            IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                                Icon(
-                                    imageVector = if (passwordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
-                                    contentDescription = if (passwordVisible) "Hide" else "Show",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
+                            val image = if (state.isPasswordVisible) Icons.Filled.VisibilityOff else Icons.Filled.Visibility
+                            IconButton(onClick = { viewModel.onLoginEvent(LoginEvent.TogglePasswordVisibility) }) {
+                                Icon(imageVector = image, contentDescription = "Toggle")
                             }
                         },
-                        visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
+                        visualTransformation = if (state.isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(12.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FruitSenseColors.GreenDark,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            focusedLabelColor = FruitSenseColors.GreenDark,
-                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant,
-                            errorBorderColor = MaterialTheme.colorScheme.error,
-                            errorLabelColor = MaterialTheme.colorScheme.error
-                        ),
-                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
-                        isError = passwordError != null,
-                        supportingText = {
-                            if (passwordError != null) {
-                                Text(
-                                    text = passwordError!!,
-                                    color = MaterialTheme.colorScheme.error,
-                                    modifier = Modifier.fillMaxWidth()
-                                )
-                            }
-                        }
+                        isError = state.passwordError != null,
+                        supportingText = { if (state.passwordError != null) Text(text = state.passwordError!!) }
                     )
 
-                    Spacer(modifier = Modifier.height(if (passwordError != null) 2.dp else 16.dp))
-
-                    if (loginError != null) {
+                    // Global Error
+                    if (state.loginError != null) {
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = loginError!!,
+                            text = state.loginError!!,
                             color = MaterialTheme.colorScheme.error,
-                            fontSize = 14.sp,
-                            modifier = Modifier.padding(bottom = 8.dp)
+                            fontSize = 14.sp
                         )
-                    } else {
-                        Spacer(modifier = Modifier.height(16.dp))
                     }
 
+                    // Forgot Password Link
+                    TextButton(
+                        onClick = onNavigateToForgotPassword,
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Lupa Password?", color = FruitSenseColors.GreenOlive, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Button
                     Button(
                         onClick = {
-                            emailError = null
-                            passwordError = null
-                            loginError = null
-                            var hasError = false
-
-                            if (email.isBlank()) {
-                                emailError = "Email tidak boleh kosong"
-                                hasError = true
-                            }
-                            if (password.isBlank()) {
-                                passwordError = "Password tidak boleh kosong"
-                                hasError = true
-                            }
-
-                            if (!hasError) {
-                                if (email == "admin@gmail.com" && password == "admin") {
-                                    onLoginSuccess()
-                                } else {
-                                    loginError = "Email atau password salah"
-                                }
-                            }
+                            // Panggil fungsi login dengan callback success
+                            viewModel.login(onSuccess = onLoginSuccess)
                         },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = FruitSenseColors.GreenDark
-                        )
+                        colors = ButtonDefaults.buttonColors(containerColor = FruitSenseColors.GreenDark),
+                        enabled = !state.isLoading // Disable saat loading
                     ) {
-                        Text(
-                            text = "Masuk",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
+                        if (state.isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
+                        } else {
+                            Text("Masuk", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    Row(
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Belum punya akun? ",
-                            // Warna teks footer adaptif
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontSize = 16.sp
-                        )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Belum punya akun? ", color = MaterialTheme.colorScheme.onSurfaceVariant)
                         TextButton(onClick = onNavigateToRegister) {
-                            Text(
-                                text = "Daftar",
-                                color = FruitSenseColors.GreenOlive,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp
-                            )
+                            Text("Daftar", color = FruitSenseColors.GreenOlive, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

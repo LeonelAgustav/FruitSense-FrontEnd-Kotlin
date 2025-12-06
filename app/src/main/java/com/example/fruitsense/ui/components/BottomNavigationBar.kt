@@ -27,16 +27,16 @@ fun BottomNavigationBar(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Container utama dibuat "Floating" (Mengambang)
+    // Container utama dibuat "Floating"
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 24.dp) // Memberi jarak dari pinggir layar
+            .padding(horizontal = 24.dp, vertical = 24.dp)
     ) {
         Surface(
-            shape = RoundedCornerShape(32.dp), // Sudut sangat membulat
+            shape = RoundedCornerShape(32.dp),
             color = FruitSenseColors.GreenDark,
-            shadowElevation = 10.dp, // Efek bayangan modern
+            shadowElevation = 10.dp,
             modifier = Modifier.height(80.dp)
         ) {
             Row(
@@ -59,17 +59,24 @@ fun BottomNavigationBar(
                 )
 
                 ModernBottomNavItem(
-                    icon = Icons.Default.History,
-                    label = "History",
+                    icon = Icons.Default.ReceiptLong,
+                    label = "Recipes",
                     isSelected = selectedTab == 2,
                     onClick = { onTabSelected(2) }
                 )
 
                 ModernBottomNavItem(
-                    icon = Icons.Default.AccountCircle,
-                    label = "Profile",
+                    icon = Icons.Default.History,
+                    label = "History",
                     isSelected = selectedTab == 3,
                     onClick = { onTabSelected(3) }
+                )
+
+                ModernBottomNavItem(
+                    icon = Icons.Default.AccountCircle,
+                    label = "Profile",
+                    isSelected = selectedTab == 4,
+                    onClick = { onTabSelected(4) }
                 )
             }
         }
@@ -109,19 +116,19 @@ fun ModernBottomNavItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
         modifier = Modifier
-            .clip(RoundedCornerShape(16.dp)) // Agar efek ripple rapi
+            .clip(RoundedCornerShape(16.dp))
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
-                indication = null // Menghilangkan ripple default agar lebih bersih
+                indication = null
             ) { onClick() }
-            .padding(8.dp) // Area sentuh
+            .padding(8.dp)
     ) {
         // Ikon dengan background pill/kapsul
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .background(color = backgroundColor, shape = RoundedCornerShape(20.dp))
-                .padding(horizontal = 16.dp, vertical = 6.dp) // Padding di dalam kapsul
+                .padding(horizontal = 16.dp, vertical = 6.dp)
                 .scale(scale)
         ) {
             Icon(
@@ -134,7 +141,7 @@ fun ModernBottomNavItem(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // Teks Label (Opsional: bisa dihilangkan jika ingin gaya ultra-minimalis)
+        // Teks Label
         if (isSelected) {
             Text(
                 text = label,

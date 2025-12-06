@@ -2,6 +2,7 @@ package com.example.fruitsense.ui.screen.dashboard.scan
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import android.view.ViewGroup
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
@@ -20,8 +21,11 @@ import androidx.compose.ui.platform.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
-import com.example.fruitsense.ui.theme.FruitSenseColors
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.label.ImageLabeling
+import com.google.mlkit.vision.label.defaults.ImageLabelerOptions
 import java.io.File
+import java.util.concurrent.Executors
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
@@ -42,7 +46,10 @@ fun CameraScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    // State untuk ImageCapture
     val imageCapture = remember { ImageCapture.Builder().build() }
+
+    // Preview View
     val previewView = remember {
         PreviewView(context).apply {
             layoutParams = ViewGroup.LayoutParams(
@@ -53,11 +60,61 @@ fun CameraScreen(
         }
     }
 
+    // Executor untuk analisis ML
+    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
+
     LaunchedEffect(Unit) {
         val cameraProvider = context.getCameraProvider()
+
+        // 1. Setup Preview
         val preview = Preview.Builder().build().also {
             it.setSurfaceProvider(previewView.surfaceProvider)
         }
+
+        // 2. Setup Image Analysis
+        val imageAnalysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+
+        // 3. Setup Image Labeler
+        // Menggunakan opsi default. Anda bisa mengatur threshold confidence jika perlu.
+        val options = ImageLabelerOptions.Builder()
+            .setConfidenceThreshold(0.7f) // Hanya ambil label dengan akurasi > 70%
+            .build()
+        val labeler = ImageLabeling.getClient(options)
+
+        imageAnalysis.setAnalyzer(analysisExecutor) { imageProxy ->
+            val rotationDegrees = imageProxy.imageInfo.rotationDegrees
+            val mediaImage = imageProxy.image
+
+            if (mediaImage != null) {
+                val image = InputImage.fromMediaImage(mediaImage, rotationDegrees)
+
+                // Proses Pelabelan Gambar
+                labeler.process(image)
+                    .addOnSuccessListener { labels ->
+                        // --- HASIL LABEL KELUAR DISINI ---
+                        for (label in labels) {
+                            val text = label.text
+                            val confidence = label.confidence
+                            // Log hasil ke Logcat untuk dicek
+                            Log.d("MLKit-Label", "Terdeteksi: $text (Akurasi: $confidence)")
+
+                            // TODO: Nanti bisa update UI State untuk menampilkan nama buah di layar
+                        }
+                    }
+                    .addOnFailureListener { e ->
+                        Log.e("MLKit-Label", "Gagal mendeteksi", e)
+                    }
+                    .addOnCompleteListener {
+                        // PENTING: Tutup imageProxy agar frame berikutnya bisa diproses
+                        imageProxy.close()
+                    }
+            } else {
+                imageProxy.close()
+            }
+        }
+
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
         try {
@@ -66,10 +123,11 @@ fun CameraScreen(
                 lifecycleOwner,
                 cameraSelector,
                 preview,
-                imageCapture
+                imageCapture,
+                imageAnalysis
             )
         } catch (e: Exception) {
-            // Handle error
+            Log.e("CameraScreen", "Gagal binding camera use cases", e)
         }
     }
 
@@ -80,10 +138,10 @@ fun CameraScreen(
             modifier = Modifier.fillMaxSize()
         )
 
-        // 2. Grid Overlay Layer (Garis bantu scanner)
+        // 2. Grid Overlay Layer
         ScannerGridOverlay()
 
-        // 3. Top Bar Controls (Gradient Background for visibility)
+        // 3. Top Bar Controls
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -94,6 +152,7 @@ fun CameraScreen(
                     )
                 )
                 .padding(16.dp)
+                .statusBarsPadding()
         ) {
             IconButton(
                 onClick = onBack,
@@ -106,7 +165,6 @@ fun CameraScreen(
                 )
             }
 
-            // Contoh icon flash (kosmetik visual)
             Icon(
                 imageVector = Icons.Default.FlashAuto,
                 contentDescription = "Flash",
@@ -120,7 +178,7 @@ fun CameraScreen(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .background(Color.Black.copy(alpha = 0.7f)) // Panel semi-transparan
+                .background(Color.Black.copy(alpha = 0.7f))
                 .padding(vertical = 32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
@@ -132,7 +190,7 @@ fun CameraScreen(
                 modifier = Modifier.padding(bottom = 24.dp)
             )
 
-            // Shutter Button Modern
+            // Shutter Button
             ShutterButton(
                 onClick = {
                     takePhoto(context, imageCapture, onPhotoTaken)
@@ -150,25 +208,22 @@ fun ShutterButton(onClick: () -> Unit) {
             .size(84.dp)
             .clickable(onClick = onClick)
     ) {
-        // Outer Ring
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .border(4.dp, Color.White, CircleShape)
         )
-        // Inner Circle (Tombol pencet)
         Box(
             modifier = Modifier
                 .size(64.dp)
                 .background(Color.White, CircleShape)
-                .border(2.dp, Color.Gray, CircleShape) // Sedikit border agar dimensi terlihat
+                .border(2.dp, Color.Gray, CircleShape)
         )
     }
 }
 
 @Composable
 fun ScannerGridOverlay() {
-    // Membuat garis grid tipis 3x3
     Column(Modifier.fillMaxSize()) {
         WeightSpacer()
         Divider(color = Color.White.copy(alpha = 0.3f), thickness = 1.dp)
@@ -195,7 +250,6 @@ fun ColumnScope.WeightSpacer() {
     Spacer(modifier = Modifier.weight(1f))
 }
 
-// Fungsi helper takePhoto (Logika tetap sama)
 private fun takePhoto(
     context: Context,
     imageCapture: ImageCapture,
@@ -217,7 +271,7 @@ private fun takePhoto(
                 onPhotoTaken(savedUri)
             }
             override fun onError(exc: ImageCaptureException) {
-                // Log error
+                Log.e("CameraX", "Photo capture failed: ${exc.message}", exc)
             }
         }
     )

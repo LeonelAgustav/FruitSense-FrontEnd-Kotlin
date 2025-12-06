@@ -21,17 +21,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.fruitsense.data.UserPreferences
 import com.example.fruitsense.ui.theme.FruitSenseColors
+import androidx.hilt.navigation.compose.hiltViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    onBackClick: () -> Unit
+    onBackClick: () -> Unit,
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val context = LocalContext.current
-    val viewModel: ProfileViewModel = viewModel(
-        factory = ProfileViewModel.Factory(UserPreferences(context))
-    )
-
     val selectedTheme by viewModel.theme.collectAsState()
 
     Scaffold(

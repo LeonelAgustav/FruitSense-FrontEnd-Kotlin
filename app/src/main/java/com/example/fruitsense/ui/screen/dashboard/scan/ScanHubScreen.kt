@@ -1,6 +1,7 @@
 package com.example.fruitsense.ui.screen.dashboard.scan
 
 import android.net.Uri
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
@@ -29,8 +30,12 @@ fun ScanHubScreen(
     val galleryLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
+        // [FIX] Logika ini dipanggil SETELAH user memilih gambar
         if (uri != null) {
-            onImageSelected(uri)
+            Log.d("ScanHubScreen", "Gambar dipilih: $uri")
+            onImageSelected(uri) // Panggil callback navigasi di ScanScreen
+        } else {
+            Log.d("ScanHubScreen", "User membatalkan pemilihan gambar")
         }
     }
 
@@ -107,7 +112,14 @@ fun ScanHubScreen(
 
         // Tombol Pilih dari Galeri (Secondary Action)
         OutlinedButton(
-            onClick = { galleryLauncher.launch("image/*") },
+            onClick = {
+                // [FIX] Launch gallery picker
+                try {
+                    galleryLauncher.launch("image/*")
+                } catch (e: Exception) {
+                    Log.e("ScanHubScreen", "Gagal membuka galeri", e)
+                }
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp),
