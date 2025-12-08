@@ -1,11 +1,11 @@
 package com.example.fruitsense.ui.screen.dashboard.profile
 
 import androidx.compose.runtime.Composable
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 
-// Definisikan rute untuk navigasi internal
 object ProfileNavigation {
     const val MENU = "profile_menu"
     const val SETTINGS = "profile_settings"
@@ -14,7 +14,8 @@ object ProfileNavigation {
 
 @Composable
 fun ProfileScreen(
-    onLogout: () -> Unit
+    onLogout: () -> Unit,
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
     // NavController untuk navigasi internal di dalam tab Profile
     val navController = rememberNavController()
@@ -32,7 +33,11 @@ fun ProfileScreen(
                 onSettingsClick = {
                     navController.navigate(ProfileNavigation.SETTINGS)
                 },
-                onLogoutClick = onLogout // ⬅️ Teruskan event logout
+                onLogoutClick = {
+                    viewModel.logout {
+                        onLogout()
+                    }
+                }
             )
         }
 

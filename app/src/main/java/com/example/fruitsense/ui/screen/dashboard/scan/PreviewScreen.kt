@@ -1,90 +1,96 @@
 package com.example.fruitsense.ui.screen.dashboard.scan
 
 import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
+import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.rememberAsyncImagePainter
+import com.example.fruitsense.data.model.FruitItem
 import com.example.fruitsense.ui.theme.FruitSenseColors
 
 @Composable
 fun PreviewScreen(
     imageUri: Uri,
-    onConfirm: () -> Unit, // Callback saat tombol "Scan" ditekan
-    onCancel: () -> Unit   // Callback saat tombol "Pilih Ulang" ditekan
+    onRetake: () -> Unit,
+    onAnalysisSuccess: (FruitItem) -> Unit,
+    viewModel: ScanViewModel = hiltViewModel() // Inject ViewModel
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(FruitSenseColors.Black)
-    ) {
-        // 1. Tampilkan gambar yang dipilih/difoto
-        AsyncImage(
-            model = imageUri,
-            contentDescription = "Preview Gambar",
+    val uiState by viewModel.uiState.collectAsState()
+
+    // Handle State Change
+    LaunchedEffect(uiState) {
+        if (uiState is ScanUiState.Success) {
+            onAnalysisSuccess((uiState as ScanUiState.Success).fruitItem)
+            viewModel.resetState() // Reset agar tidak trigger lagi saat back
+        }
+    }
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        // Gambar Full Screen
+        Image(
+            painter = rememberAsyncImagePainter(imageUri),
+            contentDescription = "Preview",
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Fit
         )
 
-        // 2. Tombol kontrol di bagian bawah
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .fillMaxWidth()
-                // Beri sedikit background transparan agar tombol terbaca
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background),
-                        startY = 0f,
-                        endY = 400f
-                    )
-                )
-                .padding(24.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            // Tombol Batal/Pilih Ulang
-            OutlinedButton(
-                onClick = onCancel,
+        // Loading Indicator Overlay
+        if (uiState is ScanUiState.Loading) {
+            Box(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.primary // Gunakan warna tema
-                ),
-                border = ButtonDefaults.outlinedButtonBorder.copy(
-                    width = 2.dp,
-                    brush = SolidColor(MaterialTheme.colorScheme.primary)
-                )
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.5f)),
+                contentAlignment = Alignment.Center
             ) {
-                Text("Pilih Ulang", fontWeight = FontWeight.Bold)
+                CircularProgressIndicator(color = FruitSenseColors.GreenDark)
             }
-
-            Spacer(modifier = Modifier.width(16.dp))
-
-            // Tombol Konfirmasi/Scan
-            Button(
-                onClick = onConfirm,
+        } else {
+            // Bottom Actions
+            Surface(
                 modifier = Modifier
-                    .weight(1f)
-                    .height(50.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary // Gunakan warna tema
-                )
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth(),
+                color = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
             ) {
-                Text("Scan Gambar Ini", fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier.padding(24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onRetake,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Ulang")
+                    }
+                    Button(
+                        onClick = { viewModel.analyzeImage(imageUri) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = FruitSenseColors.GreenDark)
+                    ) {
+                        Text("Analisa", color = Color.White)
+                    }
+                }
             }
+        }
+
+        // Error Message
+        if (uiState is ScanUiState.Error) {
+            // Tampilkan Snackbar atau Text Error sederhana
+            val errorMsg = (uiState as ScanUiState.Error).message
+            Text(
+                text = errorMsg,
+                color = Color.Red,
+                modifier = Modifier.align(Alignment.Center).background(Color.White)
+            )
         }
     }
 }

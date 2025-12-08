@@ -1,36 +1,24 @@
 package com.example.fruitsense.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.Archive
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.unit.*
 import com.example.fruitsense.ui.theme.FruitSenseColors
 
 @Composable
@@ -39,86 +27,128 @@ fun BottomNavigationBar(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    // Container utama dibuat "Floating"
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(90.dp),
-        shape = RoundedCornerShape(topStart = 0.dp, topEnd = 0.dp),
-        colors = CardDefaults.cardColors(containerColor = FruitSenseColors.GreenDark)
+            .padding(horizontal = 24.dp, vertical = 24.dp)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 18.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            shape = RoundedCornerShape(32.dp),
+            color = FruitSenseColors.GreenDark,
+            shadowElevation = 10.dp,
+            modifier = Modifier.height(80.dp)
         ) {
-            BottomNavItem(
-                icon = Icons.Default.CameraAlt,
-                label = "Scan",
-                isSelected = selectedTab == 0,
-                onClick = { onTabSelected(0) }
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ModernBottomNavItem(
+                    icon = Icons.Default.CameraAlt,
+                    label = "Scan",
+                    isSelected = selectedTab == 0,
+                    onClick = { onTabSelected(0) }
+                )
 
-            BottomNavItem(
-                icon = Icons.Default.Archive,
-                label = "Inventory",
-                isSelected = selectedTab == 1,
-                onClick = { onTabSelected(1) }
-            )
+                ModernBottomNavItem(
+                    icon = Icons.Default.Archive,
+                    label = "Inventory",
+                    isSelected = selectedTab == 1,
+                    onClick = { onTabSelected(1) }
+                )
 
-            BottomNavItem(
-                icon = Icons.Default.History,
-                label = "History",
-                isSelected = selectedTab == 2,
-                onClick = { onTabSelected(2) }
-            )
+                ModernBottomNavItem(
+                    icon = Icons.Default.ReceiptLong,
+                    label = "Recipes",
+                    isSelected = selectedTab == 2,
+                    onClick = { onTabSelected(2) }
+                )
 
-            BottomNavItem(
-                icon = Icons.Default.AccountCircle,
-                label = "Profile",
-                isSelected = selectedTab == 3,
-                onClick = { onTabSelected(3) }
-            )
+                ModernBottomNavItem(
+                    icon = Icons.Default.History,
+                    label = "History",
+                    isSelected = selectedTab == 3,
+                    onClick = { onTabSelected(3) }
+                )
+
+                ModernBottomNavItem(
+                    icon = Icons.Default.AccountCircle,
+                    label = "Profile",
+                    isSelected = selectedTab == 4,
+                    onClick = { onTabSelected(4) }
+                )
+            }
         }
     }
 }
 
 @Composable
-fun BottomNavItem(
+fun ModernBottomNavItem(
     icon: ImageVector,
     label: String,
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
+    // Animasi warna background saat dipilih
+    val backgroundColor by animateColorAsState(
+        targetValue = if (isSelected) FruitSenseColors.White.copy(alpha = 0.2f) else Color.Transparent,
+        label = "bgColorAnimation"
+    )
+
+    // Animasi warna ikon
+    val contentColor by animateColorAsState(
+        targetValue = if (isSelected) FruitSenseColors.White else FruitSenseColors.GrayDark, // Asumsi GrayDark terlihat di atas GreenDark
+        label = "iconColorAnimation"
+    )
+
+    // Animasi scale efek pantul (bounce) sedikit saat dipilih
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.1f else 1.0f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "scaleAnimation"
+    )
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        verticalArrangement = Arrangement.Center,
+        modifier = Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() }
+            .padding(8.dp)
     ) {
-        IconButton(
-            onClick = onClick,
+        // Ikon dengan background pill/kapsul
+        Box(
+            contentAlignment = Alignment.Center,
             modifier = Modifier
-                .size(56.dp)
-                .background(
-                    color = if (isSelected) FruitSenseColors.White else Color.Transparent,
-                    shape = CircleShape
-                ),
-            colors = IconButtonDefaults.iconButtonColors(
-                contentColor = if (isSelected) FruitSenseColors.GreenDark else FruitSenseColors.GrayDark
-            )
+                .background(color = backgroundColor, shape = RoundedCornerShape(20.dp))
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .scale(scale)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = label,
-                modifier = Modifier.size(28.dp)
+                tint = contentColor,
+                modifier = Modifier.size(26.dp)
             )
         }
 
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-            color = if (isSelected) FruitSenseColors.GreenDark else FruitSenseColors.GrayDark
-        )
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Teks Label
+        if (isSelected) {
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = FruitSenseColors.White
+            )
+        }
     }
 }
