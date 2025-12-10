@@ -1,15 +1,15 @@
 package com.example.fruitsense.data.repository
 
 import android.util.Log
-import com.example.fruitsense.data.UserPreferences
+import com.example.fruitsense.data.*
 import com.example.fruitsense.data.api.ApiService
 import com.example.fruitsense.data.model.*
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.*
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import java.io.File
 import javax.inject.Inject
 
 class AuthRepository @Inject constructor(
@@ -88,10 +88,9 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    // --- RESET PASSWORD (Pakai Token Khusus Reset) ---
+    // --- RESET PASSWORD
     suspend fun resetPassword(newPassword: String): Flow<Result<BasicResponse>> = flow {
         try {
-            // [FIX] Ambil token dari RESET TOKEN key
             val resetToken = userPreferences.resetTokenFlow.first()
             Log.d("AuthRepo", "ResetPassword Token: $resetToken")
 
@@ -99,12 +98,8 @@ class AuthRepository @Inject constructor(
                 throw Exception("Sesi reset password habis. Ulangi proses lupa password.")
             }
 
-            // [FIX] Kirim token reset secara MANUAL di header
-            // Interceptor di AppModule harus cukup pintar untuk tidak menimpa header ini,
-            // ATAU kita update ApiService agar menerima @Header("Authorization") yang akan override interceptor.
             val response = apiService.resetPassword("Bearer $resetToken", ResetPasswordRequest(newPassword))
 
-            // Bersihkan token reset setelah dipakai
             userPreferences.clearResetToken()
 
             emit(Result.success(response))
@@ -114,7 +109,7 @@ class AuthRepository @Inject constructor(
         }
     }
 
-    // ... (Logout, Profile, Update Profile TETAP SAMA) ...
+    // --- LOGOUT ---
     suspend fun logout() {
         try {
             apiService.logout()
@@ -141,25 +136,36 @@ class AuthRepository @Inject constructor(
         return userPreferences.tokenFlow
     }
 
-    suspend fun updateProfile(name: String, imageFile: java.io.File?): kotlinx.coroutines.flow.Flow<Result<com.example.fruitsense.data.model.BasicResponse>> = kotlinx.coroutines.flow.flow {
+    private suspend fun getToken(): String {
+        return userPreferences.tokenFlow.first() ?: ""
+    }
+
+    suspend fun updateProfile(name: String, imageFile: File?): Flow<Result<BasicResponse>> = flow {
         try {
+            // 1. Persiapan Data Nama
             val nameBody = if (name.isNotBlank())
                 name.toRequestBody("text/plain".toMediaTypeOrNull())
             else null
 
+            // 2. Persiapan Data Gambar (Avatar)
             val imagePart = if (imageFile != null) {
                 val requestImage = imageFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                okhttp3.MultipartBody.Part.createFormData("avatar", imageFile.name, requestImage)
+                // Parameter "avatar" harus sesuai dengan yang diminta backend (cek ApiService/Postman)
+                MultipartBody.Part.createFormData("avatar", imageFile.name, requestImage)
             } else null
 
+            // 3. Panggil API
+            // Pastikan ApiService.updateProfile menerima (RequestBody?, MultipartBody.Part?)
             val response = apiService.updateProfile(nameBody, imagePart)
 
+            // 4. Handle Response
             if (response.error != true) {
                 emit(Result.success(response))
             } else {
                 emit(Result.failure(Exception(response.message)))
             }
         } catch (e: Exception) {
+            // 5. Handle Error Jaringan/Lainnya
             emit(Result.failure(e))
         }
     }

@@ -1,9 +1,7 @@
 package com.example.fruitsense.ui.screen.auth.forgot_password
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -14,18 +12,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.fruitsense.R
 import com.example.fruitsense.ui.screen.auth.AuthViewModel
 import com.example.fruitsense.ui.screen.auth.ForgotPasswordEvent
-import com.example.fruitsense.ui.theme.FruitSenseColors
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ForgotPasswordScreen(
     onNavigateToLogin: () -> Unit,
@@ -38,86 +34,96 @@ fun ForgotPasswordScreen(
         viewModel.clearForgotErrors()
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        IconButton(
-            onClick = onNavigateToLogin,
-            modifier = Modifier.align(Alignment.TopStart).padding(16.dp)
-        ) {
-            Icon(Icons.Default.ArrowBack, contentDescription = "Kembali", tint = MaterialTheme.colorScheme.onBackground)
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = onNavigateToLogin) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                    }
+                },
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                )
+            )
         }
-
-        Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+    ) { paddingValues ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .padding(paddingValues)
         ) {
-            Icon(painter = painterResource(id = R.drawable.fruitsense), contentDescription = "Logo", modifier = Modifier.size(180.dp), tint = Color.Unspecified)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                elevation = CardDefaults.cardElevation(8.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
-                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "Lupa Password?", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = FruitSenseColors.GreenDark)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        text = "Masukkan email yang terdaftar. Kami akan mengirimkan kode verifikasi untuk mereset password Anda.",
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 20.sp
-                    )
-                    Spacer(modifier = Modifier.height(32.dp))
+                // Ilustrasi Logo (Opsional, diperkecil)
+                Icon(
+                    painter = painterResource(id = R.drawable.fruitsense),
+                    contentDescription = "Logo",
+                    modifier = Modifier.size(100.dp),
+                    tint = Color.Unspecified
+                )
 
-                    OutlinedTextField(
-                        value = state.email,
-                        onValueChange = { viewModel.onForgotEvent(ForgotPasswordEvent.EmailChanged(it)) },
-                        label = { Text("Email") },
-                        leadingIcon = { Icon(Icons.Default.Email, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        singleLine = true,
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = FruitSenseColors.GreenDark,
-                            unfocusedBorderColor = MaterialTheme.colorScheme.outline,
-                            errorBorderColor = MaterialTheme.colorScheme.error
-                        ),
-                        textStyle = TextStyle(color = MaterialTheme.colorScheme.onSurface),
-                        isError = state.emailError != null,
-                        supportingText = { if (state.emailError != null) Text(text = state.emailError!!, color = MaterialTheme.colorScheme.error) }
-                    )
+                Spacer(modifier = Modifier.height(32.dp))
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                Text(
+                    text = "Lupa Password?",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Bold
+                )
 
-                    Button(
-                        onClick = {
-                            viewModel.sendForgotPasswordCode(onSuccess = onCodeSent)
-                        },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = FruitSenseColors.GreenDark),
-                        enabled = !state.isLoading
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                        } else {
-                            Text(text = "Kirim Kode", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Masukkan email yang terdaftar. Kami akan mengirimkan kode verifikasi untuk mereset password Anda.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Input Email (Rounded 12.dp)
+                OutlinedTextField(
+                    value = state.email,
+                    onValueChange = { viewModel.onForgotEvent(ForgotPasswordEvent.EmailChanged(it)) },
+                    label = { Text("Email") },
+                    leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = MaterialTheme.shapes.small, // 12.dp
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                    singleLine = true,
+                    isError = state.emailError != null,
+                    supportingText = {
+                        if (state.emailError != null) {
+                            Text(text = state.emailError!!, color = MaterialTheme.colorScheme.error)
                         }
                     }
+                )
 
-                    Spacer(modifier = Modifier.height(16.dp))
-                    TextButton(onClick = onNavigateToLogin) {
-                        Text(text = "Kembali ke Login", color = MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = FontWeight.SemiBold)
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Button (Pill Shape 50.dp)
+                Button(
+                    onClick = { viewModel.sendForgotPasswordCode(onSuccess = onCodeSent) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    enabled = !state.isLoading
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text(text = "Kirim Kode", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     }
                 }
             }

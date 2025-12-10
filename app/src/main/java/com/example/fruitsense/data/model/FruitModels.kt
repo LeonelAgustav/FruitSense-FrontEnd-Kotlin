@@ -46,6 +46,11 @@ data class HistoryResponse(
     @SerializedName("data") val data: List<FruitItem>
 )
 
+data class UpdateInventoryRequest(
+    @SerializedName("stock_quantity") val stockQuantity: Int,
+    @SerializedName("fruit_name") val fruitName: String
+)
+
 
 // --- ENTITY UTAMA ---
 
@@ -61,7 +66,7 @@ data class FruitItem(
     val imageUri: String? = null,
 
     @SerializedName("created_at")
-    val dateAdded: String? = null, // Backend kirim String ISO
+    val dateAdded: String? = null,
 
     @SerializedName("expiration_date")
     val expiryDate: String? = null,
@@ -73,14 +78,10 @@ data class FruitItem(
     val grade: String? = "Unknown",
 
     @SerializedName("stock_quantity")
-    val stock: Int = 1,
+    val stock: Int? = null,
 
-    // Field tambahan yang mungkin belum ada di list inventory tapi ada di detail
     @SerializedName("result_summary")
     val aiDescription: String = "",
-
-    @SerializedName("freshness_score")
-    val freshness: Int = 0, // Jika backend belum kirim, default 0
 
     @SerializedName("storage_advice")
     val storageAdvice: String = "",

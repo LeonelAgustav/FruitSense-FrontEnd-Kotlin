@@ -45,8 +45,8 @@ class FruitExpiryWorker(context: Context, workerParams: WorkerParameters) : Work
     private fun getMockFruitData(): List<FruitItem> {
         val now = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.getDefault()).format(Date())
         return listOf(
-            FruitItem(id = "1", name = "Pisang", dateAdded = now, freshness = 40, grade = "B"),
-            FruitItem(id = "2", name = "Apel", dateAdded = now, freshness = 85, grade = "A")
+            FruitItem(id = "1", name = "Pisang", dateAdded = now, grade = "B"),
+            FruitItem(id = "2", name = "Apel", dateAdded = now, grade = "A")
         )
     }
 }

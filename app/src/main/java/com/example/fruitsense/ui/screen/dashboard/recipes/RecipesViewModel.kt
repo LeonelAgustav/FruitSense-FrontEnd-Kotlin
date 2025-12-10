@@ -24,30 +24,30 @@ class RecipesViewModel @Inject constructor(
     private val repository: FruitRepository
 ) : ViewModel() {
 
-    // --- State untuk Halaman List Resep ---
+    // --- State List Resep ---
     private val _uiState = MutableStateFlow<RecipesUiState>(RecipesUiState.Loading)
     val uiState: StateFlow<RecipesUiState> = _uiState.asStateFlow()
 
-    // --- Selection Mode States [BARU] ---
-    // Menyimpan Set ID resep yang dipilih
     private val _selectedRecipeIds = MutableStateFlow<Set<String>>(emptySet())
     val selectedRecipeIds: StateFlow<Set<String>> = _selectedRecipeIds.asStateFlow()
 
-    // Mode seleksi aktif jika ada minimal 1 item terpilih
-    // Kita bisa gunakan computed property di UI, tapi state juga oke.
     private val _deleteMessage = MutableStateFlow<String?>(null)
     val deleteMessage: StateFlow<String?> = _deleteMessage.asStateFlow()
 
-    // --- State untuk Tombol Generate ---
+    // --- State Generate ---
     private val _generationState = MutableStateFlow<List<String>>(emptyList())
     val generationState: StateFlow<List<String>> = _generationState.asStateFlow()
+
     private val _isGenerating = MutableStateFlow(false)
     val isGenerating: StateFlow<Boolean> = _isGenerating.asStateFlow()
-    private val _generateError = MutableStateFlow<String?>(null)
-    val generateError: StateFlow<String?> = _generateError.asStateFlow()
 
-    private val _hasGenerated = MutableStateFlow(false)
-    val hasGenerated: StateFlow<Boolean> = _hasGenerated.asStateFlow()
+    // [BARU] State untuk Trigger Navigasi ke Detail
+    private val _navigateToDetail = MutableStateFlow<RecipeItem?>(null)
+    val navigateToDetail: StateFlow<RecipeItem?> = _navigateToDetail.asStateFlow()
+
+    init {
+        // loadAllRecipes() // Optional: Load on init
+    }
 
     fun loadAllRecipes() {
         viewModelScope.launch {
@@ -62,111 +62,75 @@ class RecipesViewModel @Inject constructor(
         }
     }
 
-    // [BARU] Toggle Selection (Pilih/Hapus Pilih)
-    fun toggleSelection(recipeId: String) {
-        val currentSelection = _selectedRecipeIds.value.toMutableSet()
-        if (currentSelection.contains(recipeId)) {
-            currentSelection.remove(recipeId)
-        } else {
-            currentSelection.add(recipeId)
-        }
-        _selectedRecipeIds.value = currentSelection
-    }
-
-    // [BARU] Clear Selection (Batal Pilih)
-    fun clearSelection() {
-        _selectedRecipeIds.value = emptySet()
-    }
-
-    // Hapus Single Item
-    fun deleteRecipe(id: String) {
-        viewModelScope.launch {
-            // 1. Optimistic Update (Hapus dari UI dulu)
-            val currentState = _uiState.value
-            if (currentState is RecipesUiState.Success) {
-                val updatedList = currentState.data.filter { it.id != id }
-                if (updatedList.isEmpty()) {
-                    _uiState.value = RecipesUiState.Empty
-                } else {
-                    _uiState.value = RecipesUiState.Success(updatedList)
-                }
-            }
-
-            // 2. Panggil API
-            repository.deleteRecipe(id).collect { result ->
-                result.onSuccess {
-                    _deleteMessage.value = "Resep berhasil dihapus"
-                    loadAllRecipes() // Sync
-                }.onFailure {
-                    _deleteMessage.value = "Gagal menghapus: ${it.message}"
-                    loadAllRecipes() // Rollback jika gagal
-                }
-            }
-        }
-    }
-
-    // [BARU] Delete Multiple Selected Recipes
-    fun deleteSelectedRecipes() {
-        val idsToDelete = _selectedRecipeIds.value.toList()
-        if (idsToDelete.isEmpty()) return
-
-        viewModelScope.launch {
-            // Optimistic Update: Hapus dari UI dulu
-            val currentState = _uiState.value
-            if (currentState is RecipesUiState.Success) {
-                val updatedList = currentState.data.filter { !idsToDelete.contains(it.id) }
-                if (updatedList.isEmpty()) {
-                    _uiState.value = RecipesUiState.Empty
-                } else {
-                    _uiState.value = RecipesUiState.Success(updatedList)
-                }
-            }
-
-            // Reset mode seleksi
-            _selectedRecipeIds.value = emptySet()
-            var successCount = 0
-
-            // Loop hapus satu per satu (karena API single delete)
-            idsToDelete.forEach { id ->
-                repository.deleteRecipe(id).collect { result ->
-                    result.onSuccess { successCount++ }
-                }
-            }
-
-            _deleteMessage.value = "Resep terpilih berhasil dihapus"
-            // Reload untuk memastikan sinkronisasi
-            loadAllRecipes()
-        }
-    }
-
-    fun generateRecommendations(fruitId: String) {
-        Log.d("RecipesVM", "Generating for ID: $fruitId")
+    // [BARU] Fungsi Generate Langsung ke Detail
+    fun generateAndNavigate(fruitId: String, fruitName: String) {
         viewModelScope.launch {
             _isGenerating.value = true
-            _generateError.value = null
-            _hasGenerated.value = true // Menandai proses dimulai
 
             repository.generateRecipes(fruitId).collect { result ->
                 result.onSuccess { list ->
-                    Log.d("RecipesVM", "Generate Success. Items: ${list.size}")
-                    _generationState.value = list
-                }.onFailure { error ->
-                    Log.e("RecipesVM", "Generate Failed", error)
-                    _generateError.value = error.message ?: "Gagal membuat resep"
+                    if (list.isNotEmpty()) {
+                        val recipeName = list.first() // Ambil rekomendasi pertama
+
+                        // Buat Dummy Object RecipeItem Lengkap (Mocking AI Result)
+                        val newRecipe = RecipeItem(
+                            id = "gen_${System.currentTimeMillis()}",
+                            title = recipeName,
+                            cookingTime = "15 Menit",
+                            ingredients = "2 buah $fruitName\n1 sdm Madu\nEs Batu secukupnya\nDaun Mint (opsional)",
+                            instructions = "1. Cuci bersih buah $fruitName.\n2. Potong kecil-kecil sesuai selera.\n3. Campurkan dengan bahan lain.\n4. Sajikan dingin.",
+                        )
+                        _generationState.value = list
+                        // Trigger navigasi
+                        _navigateToDetail.value = newRecipe
+                    }
+                }.onFailure {
+                    // Handle error (bisa tambahkan state error message terpisah)
                 }
                 _isGenerating.value = false
             }
         }
     }
 
-    fun clearGenerationState() {
-        _generationState.value = emptyList()
-        _generateError.value = null
-        _isGenerating.value = false
-        _hasGenerated.value = false
+    // Reset navigasi setelah pindah layar
+    fun onDetailNavigated() {
+        _navigateToDetail.value = null
     }
 
-    fun clearDeleteMessage() {
-        _deleteMessage.value = null
+    // --- Fungsi Lama (Tetap Dipertahankan) ---
+    fun generateRecommendations(fruitId: String) {
+        viewModelScope.launch {
+            _isGenerating.value = true
+            repository.generateRecipes(fruitId).collect { result ->
+                result.onSuccess { list -> _generationState.value = list }
+                _isGenerating.value = false
+            }
+        }
     }
+
+    fun toggleSelection(recipeId: String) {
+        val currentSelection = _selectedRecipeIds.value.toMutableSet()
+        if (currentSelection.contains(recipeId)) currentSelection.remove(recipeId) else currentSelection.add(recipeId)
+        _selectedRecipeIds.value = currentSelection
+    }
+
+    fun clearSelection() { _selectedRecipeIds.value = emptySet() }
+
+    fun deleteSelectedRecipes() {
+        val idsToDelete = _selectedRecipeIds.value.toList()
+        if (idsToDelete.isEmpty()) return
+        viewModelScope.launch {
+            val currentState = _uiState.value
+            if (currentState is RecipesUiState.Success) {
+                val updatedList = currentState.data.filter { !idsToDelete.contains(it.id) }
+                _uiState.value = if (updatedList.isEmpty()) RecipesUiState.Empty else RecipesUiState.Success(updatedList)
+            }
+            _selectedRecipeIds.value = emptySet()
+            idsToDelete.forEach { id -> repository.deleteRecipe(id).collect {} }
+            _deleteMessage.value = "Resep terpilih berhasil dihapus"
+            loadAllRecipes()
+        }
+    }
+
+    fun clearDeleteMessage() { _deleteMessage.value = null }
 }

@@ -1,30 +1,22 @@
 package com.example.fruitsense.ui.screen.auth
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.*
+import androidx.compose.ui.res.*
+import androidx.compose.ui.draw.*
+import androidx.compose.ui.unit.*
+import androidx.compose.ui.text.font.*
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.example.fruitsense.R
-import com.example.fruitsense.data.repository.AuthRepository
+import com.example.fruitsense.data.repository.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 // --- View Model Khusus Splash ---
@@ -57,6 +49,18 @@ fun SplashScreen(
 ) {
     val isLoggedIn by viewModel.isLoggedIn.collectAsState()
 
+    // --- ANIMATION LOGIC ---
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1.0f,
+        targetValue = 1.1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "logoScale"
+    )
+
     LaunchedEffect(Unit) {
         viewModel.checkSession()
     }
@@ -65,20 +69,24 @@ fun SplashScreen(
         when (isLoggedIn) {
             true -> onNavigateToDashboard()
             false -> onNavigateToLogin()
-            null -> { /* Masih loading/checking, do nothing */ }
+            null -> { /* Loading */ }
         }
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background),
+            .background(MaterialTheme.colorScheme.background), // Menggunakan warna background tema baru
         contentAlignment = Alignment.Center
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.fruitsense),
-            contentDescription = "Logo",
-            modifier = Modifier.size(180.dp)
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(
+                painter = painterResource(id = R.drawable.fruitsense),
+                contentDescription = "Logo",
+                modifier = Modifier
+                    .size(180.dp)
+                    .scale(scale) // Terapkan animasi
+            )
+        }
     }
 }

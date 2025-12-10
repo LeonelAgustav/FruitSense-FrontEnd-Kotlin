@@ -1,23 +1,13 @@
 package com.example.fruitsense.ui.components
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.*
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.*
+import androidx.compose.ui.graphics.vector.*
+import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.*
 import com.example.fruitsense.ui.theme.FruitSenseColors
 
@@ -27,128 +17,54 @@ fun BottomNavigationBar(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Container utama dibuat "Floating"
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 24.dp)
+    // Definisi Item Navigasi
+    val items = listOf(
+        NavigationItem("Scan", Icons.Filled.CameraAlt, Icons.Outlined.CameraAlt),
+        NavigationItem("Inventory", Icons.Filled.Inventory2, Icons.Outlined.Inventory2),
+        NavigationItem("Resep", Icons.Filled.RestaurantMenu, Icons.Outlined.RestaurantMenu), // Mengganti ReceiptLong agar lebih relevan
+        NavigationItem("Riwayat", Icons.Filled.History, Icons.Outlined.History),
+        NavigationItem("Profil", Icons.Filled.Person, Icons.Outlined.Person)
+    )
+
+    NavigationBar(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.surface,
+        tonalElevation = 8.dp
     ) {
-        Surface(
-            shape = RoundedCornerShape(32.dp),
-            color = FruitSenseColors.GreenDark,
-            shadowElevation = 10.dp,
-            modifier = Modifier.height(80.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ModernBottomNavItem(
-                    icon = Icons.Default.CameraAlt,
-                    label = "Scan",
-                    isSelected = selectedTab == 0,
-                    onClick = { onTabSelected(0) }
+        items.forEachIndexed { index, item ->
+            val isSelected = selectedTab == index
+
+            NavigationBarItem(
+                selected = isSelected,
+                onClick = { onTabSelected(index) },
+                icon = {
+                    Icon(
+                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                        contentDescription = item.label
+                    )
+                },
+                label = {
+                    Text(
+                        text = item.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary, // Forest Green
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), // Highlight hijau muda transparan
+                    unselectedIconColor = FruitSenseColors.NeutralGrey,
+                    unselectedTextColor = FruitSenseColors.NeutralGrey
                 )
-
-                ModernBottomNavItem(
-                    icon = Icons.Default.Archive,
-                    label = "Inventory",
-                    isSelected = selectedTab == 1,
-                    onClick = { onTabSelected(1) }
-                )
-
-                ModernBottomNavItem(
-                    icon = Icons.Default.ReceiptLong,
-                    label = "Recipes",
-                    isSelected = selectedTab == 2,
-                    onClick = { onTabSelected(2) }
-                )
-
-                ModernBottomNavItem(
-                    icon = Icons.Default.History,
-                    label = "History",
-                    isSelected = selectedTab == 3,
-                    onClick = { onTabSelected(3) }
-                )
-
-                ModernBottomNavItem(
-                    icon = Icons.Default.AccountCircle,
-                    label = "Profile",
-                    isSelected = selectedTab == 4,
-                    onClick = { onTabSelected(4) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun ModernBottomNavItem(
-    icon: ImageVector,
-    label: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    // Animasi warna background saat dipilih
-    val backgroundColor by animateColorAsState(
-        targetValue = if (isSelected) FruitSenseColors.White.copy(alpha = 0.2f) else Color.Transparent,
-        label = "bgColorAnimation"
-    )
-
-    // Animasi warna ikon
-    val contentColor by animateColorAsState(
-        targetValue = if (isSelected) FruitSenseColors.White else FruitSenseColors.GrayDark, // Asumsi GrayDark terlihat di atas GreenDark
-        label = "iconColorAnimation"
-    )
-
-    // Animasi scale efek pantul (bounce) sedikit saat dipilih
-    val scale by animateFloatAsState(
-        targetValue = if (isSelected) 1.1f else 1.0f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "scaleAnimation"
-    )
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onClick() }
-            .padding(8.dp)
-    ) {
-        // Ikon dengan background pill/kapsul
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier
-                .background(color = backgroundColor, shape = RoundedCornerShape(20.dp))
-                .padding(horizontal = 16.dp, vertical = 6.dp)
-                .scale(scale)
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = contentColor,
-                modifier = Modifier.size(26.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        // Teks Label
-        if (isSelected) {
-            Text(
-                text = label,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = FruitSenseColors.White
             )
         }
     }
 }
+
+// Data Class Helper untuk Item Navigasi
+private data class NavigationItem(
+    val label: String,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector
+)
