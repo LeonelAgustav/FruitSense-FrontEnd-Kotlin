@@ -57,6 +57,12 @@ interface ApiService {
         @Part("grade") grade: RequestBody? = null
     ): BasicResponse
 
+    @PUT("inventory/{id}")
+    suspend fun updateInventory(
+        @Path("id") id: String,
+        @Body body: UpdateInventoryRequest
+    ): BasicResponse
+
     @DELETE("inventory/{id}")
     suspend fun deleteInventory(@Path("id") id: String): Response<Unit>
 

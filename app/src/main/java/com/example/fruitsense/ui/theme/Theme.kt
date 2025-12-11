@@ -9,32 +9,48 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 
+// Mapping warna dari JSON ke Material3 Dark Scheme
 private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+    primary = FruitSenseColors.DarkPrimary,
+    onPrimary = FruitSenseColors.DarkOnPrimary,
+    secondary = FruitSenseColors.DarkSecondary,
+    onSecondary = FruitSenseColors.DarkOnPrimary, // Kontras aman
+    background = FruitSenseColors.DarkBackground,
+    surface = FruitSenseColors.DarkSurface,
+    onSurface = FruitSenseColors.DarkOnSurface,
+    outline = FruitSenseColors.DarkOutline,
+    error = FruitSenseColors.RottenRed
 )
 
+// Mapping warna dari JSON ke Material3 Light Scheme
 private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
+    primary = FruitSenseColors.LightPrimary,
+    onPrimary = FruitSenseColors.LightOnPrimary,
+    secondary = FruitSenseColors.LightSecondary,
+    onSecondary = FruitSenseColors.LightOnPrimary,
+    background = FruitSenseColors.LightBackground,
+    surface = FruitSenseColors.LightSurface,
+    onSurface = FruitSenseColors.LightOnSurface,
+    outline = FruitSenseColors.LightOutline,
+    error = FruitSenseColors.RottenRed
 )
 
 @Composable
 fun FruitSenseTheme(
-    // UBAH DISINI: Menerima String status tema, defaultnya SYSTEM
-    appTheme: String = "SYSTEM",
-    dynamicColor: Boolean = true,
+    appTheme: String = "SYSTEM", // Parameter dinamis dari ProfileViewModel
+    dynamicColor: Boolean = false, // FALSE secara default agar warna brand kita tidak tertimpa warna wallpaper HP user
     content: @Composable () -> Unit
 ) {
-    // Logika penentuan Dark Mode berdasarkan pilihan user
     val darkTheme = when (appTheme) {
-        "LIGHT" -> false                // Paksa Terang
-        "DARK" -> true                  // Paksa Gelap
-        else -> isSystemInDarkTheme()   // Ikuti Pengaturan HP (SYSTEM)
+        "LIGHT" -> false
+        "DARK" -> true
+        else -> isSystemInDarkTheme()
     }
 
     val colorScheme = when {
@@ -46,9 +62,20 @@ fun FruitSenseTheme(
         else -> LightColorScheme
     }
 
+    // Mengatur warna Status Bar agar sesuai tema
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as Activity).window
+            window.statusBarColor = colorScheme.background.toArgb() // Status bar mengikuti background
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
+        }
+    }
+
     MaterialTheme(
         colorScheme = colorScheme,
-        typography = Typography,
+        typography = AppTypography, // Menggunakan Type.kt baru
+        shapes = Shapes,            // Menggunakan Shapes.kt baru
         content = content
     )
 }

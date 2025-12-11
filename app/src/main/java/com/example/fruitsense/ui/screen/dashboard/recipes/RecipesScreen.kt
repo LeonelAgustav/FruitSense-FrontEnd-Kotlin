@@ -3,26 +3,25 @@ package com.example.fruitsense.ui.screen.dashboard.recipes
 import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
-import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.lazy.staggeredgrid.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.text.font.*
-import androidx.compose.ui.text.style.*
-import androidx.compose.ui.platform.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.*
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.fruitsense.data.model.RecipeItem
-import com.example.fruitsense.ui.theme.FruitSenseColors
-import com.example.fruitsense.ui.screen.dashboard.detail.RecipesViewModel
 import com.example.fruitsense.ui.screen.dashboard.detail.RecipesUiState
+import com.example.fruitsense.ui.screen.dashboard.detail.RecipesViewModel
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun RecipesScreen(
     onBackClick: () -> Unit,
@@ -35,15 +34,9 @@ fun RecipesScreen(
     val context = LocalContext.current
     val isSelectionMode = selectedIds.isNotEmpty()
 
-    LaunchedEffect(Unit) {
-        viewModel.loadAllRecipes()
-    }
-
+    LaunchedEffect(Unit) { viewModel.loadAllRecipes() }
     LaunchedEffect(deleteMessage) {
-        deleteMessage?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-            viewModel.clearDeleteMessage()
-        }
+        deleteMessage?.let { Toast.makeText(context, it, Toast.LENGTH_SHORT).show(); viewModel.clearDeleteMessage() }
     }
 
     // --- Dialogs ---
@@ -52,297 +45,163 @@ fun RecipesScreen(
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Hapus ${selectedIds.size} Resep?") },
-            text = { Text("Item yang dipilih akan dihapus permanen.") },
+            text = { Text("Resep terpilih akan dihapus permanen.") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteSelectedRecipes()
-                        showDeleteDialog = false
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Hapus") }
+                TextButton(onClick = { viewModel.deleteSelectedRecipes(); showDeleteDialog = false }) { Text("Hapus", color = MaterialTheme.colorScheme.error) }
             },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") }
-            }
+            dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") } }
         )
     }
 
-    var recipeToDeleteSingle by remember { mutableStateOf<RecipeItem?>(null) }
-    if (recipeToDeleteSingle != null) {
-        AlertDialog(
-            onDismissRequest = { recipeToDeleteSingle = null },
-            title = { Text("Hapus Resep?") },
-            text = { Text("Hapus '${recipeToDeleteSingle?.title}' dari koleksi?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        recipeToDeleteSingle?.let { viewModel.deleteRecipe(it.id) }
-                        recipeToDeleteSingle = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Hapus") }
-            },
-            dismissButton = {
-                TextButton(onClick = { recipeToDeleteSingle = null }) { Text("Batal") }
-            }
-        )
-    }
-
-    // --- UI Structure with Scaffold ---
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0.dp),
         topBar = {
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background)
-                    .statusBarsPadding()
-            ) {
-                // Header Content
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isSelectionMode) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(Icons.Default.Close, contentDescription = "Batal")
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "${selectedIds.size} Dipilih",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
+                            IconButton(onClick = { viewModel.clearSelection() }) { Icon(Icons.Default.Close, null) }
+                            Text("${selectedIds.size} Dipilih", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
-                        IconButton(onClick = { showDeleteDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Hapus Terpilih",
-                                tint = MaterialTheme.colorScheme.error
-                            )
-                        }
+                        IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, null, tint = MaterialTheme.colorScheme.error) }
                     } else {
                         Column {
-                            Text(
-                                text = "Koleksi Resep",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = FruitSenseColors.GreenDark
-                            )
-                            Text(
-                                text = "Daftar resep yang Anda simpan",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("Inspirasi Masak", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+                            Text("Koleksi resep sehatmu", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                HorizontalDivider(
-                    thickness = 1.dp,
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
             }
         }
-    ) { paddingValues ->
-        // Content Area
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
+    ) { padding ->
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(padding)
+            .padding(vertical = 24.dp)
         ) {
             when (val state = uiState) {
-                is RecipesUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = FruitSenseColors.GreenDark)
+                is RecipesUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                is RecipesUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(state.message) }
+                is RecipesUiState.Empty -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(Icons.Outlined.RestaurantMenu, null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.outline)
+                        Text("Belum ada resep", color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 is RecipesUiState.Success -> {
-                    // Padding horizontal dipindah ke sini
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(
-                            top = 8.dp,
-                            bottom = 100.dp,
-                            start = 24.dp,
-                            end = 24.dp
-                        )
+                    // STAGGERED GRID (Masonry Layout)
+                    LazyVerticalStaggeredGrid(
+                        columns = StaggeredGridCells.Fixed(2),
+                        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalItemSpacing = 12.dp,
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         items(state.data, key = { it.id }) { recipe ->
-                            val isSelected = selectedIds.contains(recipe.id)
-                            RecipeItemCardSelectable(
+                            RecipeMasonryCard(
                                 recipe = recipe,
-                                isSelected = isSelected,
+                                isSelected = selectedIds.contains(recipe.id),
                                 isSelectionMode = isSelectionMode,
-                                onLongClick = {
-                                    viewModel.toggleSelection(recipe.id)
-                                },
+                                onLongClick = { viewModel.toggleSelection(recipe.id) },
                                 onClick = {
-                                    if (isSelectionMode) {
-                                        viewModel.toggleSelection(recipe.id)
-                                    } else {
-                                        onRecipeClick(recipe) // Navigasi bekerja
-                                    }
-                                },
-                                onDeleteClick = { recipeToDeleteSingle = recipe }
+                                    if (isSelectionMode) viewModel.toggleSelection(recipe.id) else onRecipeClick(recipe)
+                                }
                             )
                         }
+                        item { Spacer(modifier = Modifier.height(80.dp)) }
                     }
-                }
-                is RecipesUiState.Empty -> {
-                    EmptyState()
-                }
-                is RecipesUiState.Error -> {
-                    ErrorState(message = state.message, onRetry = { viewModel.loadAllRecipes() })
                 }
             }
         }
     }
 }
 
-// ... Component RecipeItemCardSelectable, ErrorState, EmptyState tetap sama
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun RecipeItemCardSelectable(
+fun RecipeMasonryCard(
     recipe: RecipeItem,
     isSelected: Boolean,
     isSelectionMode: Boolean,
     onLongClick: () -> Unit,
-    onClick: () -> Unit,
-    onDeleteClick: () -> Unit
+    onClick: () -> Unit
 ) {
-    val cardColor = if (isSelected) FruitSenseColors.GreenDark.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
-    val borderStroke = BorderStroke(2.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
 
     Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor),
-        border = borderStroke,
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 0.dp else 2.dp),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+        ),
+        border = if (isSelected) BorderStroke(3.dp, borderColor) else null,
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
+            .clip(MaterialTheme.shapes.medium)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
-        Box {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            if (isSelectionMode) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = null,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = 8.dp, y = (-8).dp),
+                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+                )
+            }
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.Top
             ) {
-                // Jika mode seleksi, tampilkan Checkbox
-                if (isSelectionMode) {
-                    Checkbox(
-                        checked = isSelected,
-                        onCheckedChange = { onClick() }, // Klik checkbox sama dengan klik item
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = FruitSenseColors.GreenDark,
-                            uncheckedColor = Color.Gray
-                        )
+                // 1. Judul Resep
+                Text(
+                    text = recipe.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // 2. Created At / Tanggal
+                Text(
+                    text = "Dibuat: 08 Des 2025",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                // 3. Info Waktu Masak
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Timer,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
-                }
-
-                Column(modifier = Modifier.weight(1f)) {
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(
-                        text = recipe.title,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Outlined.Timer,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = recipe.cookingTime,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = Color.Gray
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(4.dp))
-
-                    Text(
-                        text = recipe.ingredients,
+                        text = recipe.cookingTime,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
-            Column(
-                modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // delete
-                if (!isSelectionMode) {
-                    IconButton(onClick = onDeleteClick) {
-                        Icon(
-                            Icons.Outlined.Delete,
-                            null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-// Komponen Error (Sama dengan Inventory)
-@Composable
-fun ErrorState(message: String, onRetry: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(48.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = message, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = FruitSenseColors.GreenDark)) {
-                Text("Coba Lagi")
-            }
-        }
-    }
-}
-
-@Composable
-fun EmptyState() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Ikon Besar Abu-abu (RestaurantMenu untuk resep)
-            Icon(
-                imageVector = Icons.Default.RestaurantMenu,
-                contentDescription = null,
-                modifier = Modifier.size(80.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Belum ada resep tersimpan",
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
         }
     }
 }

@@ -3,7 +3,6 @@ package com.example.fruitsense.ui.screen.auth.verification
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -18,33 +17,28 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.fruitsense.R
 import com.example.fruitsense.ui.screen.auth.AuthViewModel
-import com.example.fruitsense.ui.theme.FruitSenseColors
 import kotlinx.coroutines.delay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EmailVerificationScreen(
-    isFromForgotPassword: Boolean, // Parameter untuk tahu konteks
+    isFromForgotPassword: Boolean,
     onVerificationSuccess: () -> Unit,
     onCancel: () -> Unit,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
-    // 1. Ambil State dari ViewModel (Shared)
     val registerState by viewModel.registerState.collectAsState()
     val forgotState by viewModel.forgotPasswordState.collectAsState()
-
     val emailToVerify = if (isFromForgotPassword) forgotState.email else registerState.email
 
-    // State Lokal UI
     var otpCode by remember { mutableStateOf("") }
     var isError by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
 
-    // Timer
     var timeLeft by remember { mutableIntStateOf(60) }
     var isTimerRunning by remember { mutableStateOf(true) }
 
@@ -58,170 +52,183 @@ fun EmailVerificationScreen(
         }
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        // Tombol Back
-        IconButton(
-            onClick = onCancel,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(16.dp)
-        ) {
-            Icon(
-                imageVector = Icons.Default.ArrowBack,
-                contentDescription = "Kembali",
-                tint = MaterialTheme.colorScheme.onBackground
+    Scaffold(
+        topBar = {
+            CenterAlignedTopAppBar(
+                title = {},
+                navigationIcon = {
+                    IconButton(onClick = onCancel) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Kembali")
+                    }
+                }
             )
         }
-
-        Column(
+    ) { paddingValues ->
+        Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .background(MaterialTheme.colorScheme.background)
+                .padding(paddingValues)
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.fruitsense),
-                contentDescription = "Logo",
-                modifier = Modifier.size(150.dp),
-                tint = Color.Unspecified
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = R.drawable.fruitsense),
+                    contentDescription = "Logo",
+                    modifier = Modifier.size(120.dp),
+                    tint = Color.Unspecified
+                )
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            Text(
-                text = "Verifikasi Email",
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold,
-                color = FruitSenseColors.GreenDark
-            )
+                Text(
+                    text = "Verifikasi Email",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            Text(
-                text = "Masukkan 6 digit kode yang telah kami kirimkan ke email Anda.",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                lineHeight = 20.sp
-            )
+                Text(
+                    text = "Masukkan 6 digit kode yang telah kami kirimkan ke email Anda.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(32.dp))
 
-            // --- INPUT OTP ---
-            BasicTextField(
-                value = otpCode,
-                onValueChange = {
-                    if (it.length <= 6 && it.all { char -> char.isDigit() }) {
-                        otpCode = it
-                        isError = false
-                        errorMessage = ""
-                    }
-                },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                decorationBox = {
-                    Row(
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        repeat(6) { index ->
-                            val char = if (index < otpCode.length) otpCode[index].toString() else ""
-                            Box(
-                                modifier = Modifier
-                                    .width(45.dp)
-                                    .height(56.dp)
-                                    .border(
-                                        width = if (index == otpCode.length) 2.dp else 1.dp,
-                                        color = if (isError) MaterialTheme.colorScheme.error else if (index == otpCode.length) FruitSenseColors.GreenDark else MaterialTheme.colorScheme.outline,
-                                        shape = RoundedCornerShape(12.dp)
+                // --- INPUT OTP Custom ---
+                BasicTextField(
+                    value = otpCode,
+                    onValueChange = {
+                        if (it.length <= 6 && it.all { char -> char.isDigit() }) {
+                            otpCode = it
+                            isError = false
+                            errorMessage = ""
+                        }
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    decorationBox = {
+                        Row(
+                            horizontalArrangement = Arrangement.SpaceEvenly,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            repeat(6) { index ->
+                                val char = if (index < otpCode.length) otpCode[index].toString() else ""
+                                val isFocused = index == otpCode.length
+
+                                // Warna Border Logis
+                                val borderColor = when {
+                                    isError -> MaterialTheme.colorScheme.error
+                                    isFocused || char.isNotEmpty() -> MaterialTheme.colorScheme.primary
+                                    else -> MaterialTheme.colorScheme.outline
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .width(45.dp)
+                                        .height(56.dp)
+                                        .border(
+                                            width = if (isFocused || char.isNotEmpty()) 2.dp else 1.dp,
+                                            color = borderColor,
+                                            shape = MaterialTheme.shapes.small // 12.dp rounded
+                                        )
+                                        .background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.small),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = char,
+                                        style = MaterialTheme.typography.headlineSmall,
+                                        color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = FontWeight.Bold
                                     )
-                                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(12.dp)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = char,
-                                    style = MaterialTheme.typography.titleLarge,
-                                    color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                }
                             }
                         }
                     }
-                }
-            )
-
-            if (isError) {
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = errorMessage.ifEmpty { "Kode verifikasi salah" },
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 14.sp
                 )
-            }
 
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // Timer
-            if (timeLeft > 0) {
-                Text(
-                    text = "Kirim ulang kode dalam 00:${timeLeft.toString().padStart(2, '0')}",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    fontSize = 14.sp
-                )
-            } else {
-                TextButton(
-                    onClick = {
-                        timeLeft = 60
-                        isTimerRunning = true
-                        // TODO: Panggil resend code
-                    }
-                ) {
-                    Text("Kirim Ulang Kode", color = FruitSenseColors.GreenOlive, fontWeight = FontWeight.Bold)
+                if (isError) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage.ifEmpty { "Kode verifikasi salah" },
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall
+                    )
                 }
-            }
 
-            Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // --- TOMBOL VERIFIKASI ---
-            Button(
-                onClick = {
-                    if (otpCode.length < 6) {
-                        isError = true
-                        errorMessage = "Masukkan 6 digit kode"
-                    } else {
-                        isLoading = true
-                        viewModel.verifyEmail(
-                            email = emailToVerify,
-                            code = otpCode,
-                            isRecovery = isFromForgotPassword,
-                            onSuccess = {
-                                isLoading = false
-                                onVerificationSuccess()
-                            },
-                            onError = { msg ->
-                                isLoading = false
-                                isError = true
-                                errorMessage = msg
-                            }
+                // Timer & Resend
+                if (timeLeft > 0) {
+                    Text(
+                        text = "Kirim ulang kode dalam 00:${timeLeft.toString().padStart(2, '0')}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    TextButton(
+                        onClick = {
+                            timeLeft = 60
+                            isTimerRunning = true
+                            // Logic resend code bisa dipanggil disini jika ada di VM
+                        }
+                    ) {
+                        Text(
+                            "Kirim Ulang Kode",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.primary,
+                            fontWeight = FontWeight.Bold
                         )
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = FruitSenseColors.GreenDark),
-                enabled = !isLoading
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                } else {
-                    Text("Verifikasi", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Button Verify
+                Button(
+                    onClick = {
+                        if (otpCode.length < 6) {
+                            isError = true
+                            errorMessage = "Masukkan 6 digit kode"
+                        } else {
+                            isLoading = true
+                            viewModel.verifyEmail(
+                                email = emailToVerify,
+                                code = otpCode,
+                                isRecovery = isFromForgotPassword,
+                                onSuccess = {
+                                    isLoading = false
+                                    onVerificationSuccess()
+                                },
+                                onError = { msg ->
+                                    isLoading = false
+                                    isError = true
+                                    errorMessage = msg
+                                }
+                            )
+                        }
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(56.dp),
+                    shape = MaterialTheme.shapes.extraLarge,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    enabled = !isLoading
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.onPrimary, modifier = Modifier.size(24.dp))
+                    } else {
+                        Text("Verifikasi", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }

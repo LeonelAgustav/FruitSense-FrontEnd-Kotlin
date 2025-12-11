@@ -3,12 +3,8 @@ package com.example.fruitsense.data.repository
 import android.util.Log
 import com.example.fruitsense.data.UserPreferences
 import com.example.fruitsense.data.api.ApiService
-import com.example.fruitsense.data.model.BasicResponse
-import com.example.fruitsense.data.model.FruitItem
-import com.example.fruitsense.data.model.RecipeItem
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
+import com.example.fruitsense.data.model.*
+import kotlinx.coroutines.flow.*
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
@@ -87,7 +83,7 @@ class FruitRepository @Inject constructor(
                     id = response.savedInventory?.id ?: "temp",
                     name = res.detected,
                     grade = res.grade,
-                    freshness = 85,
+                    expiryDays = res.daysLeft,
                     aiDescription = "Nutrisi: ${res.nutrients}",
                     storageAdvice = "Sisa waktu: ${res.daysLeft} hari",
                     imageUri = imageFile.path
@@ -201,13 +197,38 @@ class FruitRepository @Inject constructor(
             val token = getToken()
             if (token.isEmpty()) throw Exception("Sesi habis")
             val response = apiService.deleteRecipe(id)
-            // Dokumentasi bilang return 200 dengan JSON BasicResponse
             if (response.error != true) {
                 emit(Result.success(response))
             } else {
                 emit(Result.failure(Exception(response.message)))
             }
         } catch (e: Exception) {
+            emit(Result.failure(Exception(parseErrorMessage(e))))
+        }
+    }
+
+    // 9. Update Inventory (Stok & Nama)
+    fun updateInventory(id: String, quantity: Int, name: String): Flow<Result<BasicResponse>> = flow {
+        try {
+            val token = getToken()
+            if (token.isEmpty()) throw Exception("Sesi habis")
+
+            val request = UpdateInventoryRequest(
+                stockQuantity = quantity,
+                fruitName = name
+            )
+
+            Log.d("FruitRepo", "Calling API Update: $id -> $request")
+
+            val response = apiService.updateInventory(id, request)
+
+            if (!response.error) {
+                emit(Result.success(response))
+            } else {
+                emit(Result.failure(Exception(response.message)))
+            }
+        } catch (e: Exception) {
+            Log.e("FruitRepo", "API Error: ${e.message}", e)
             emit(Result.failure(Exception(parseErrorMessage(e))))
         }
     }

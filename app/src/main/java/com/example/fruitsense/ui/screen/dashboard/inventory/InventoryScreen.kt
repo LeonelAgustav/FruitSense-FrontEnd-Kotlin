@@ -3,7 +3,7 @@ package com.example.fruitsense.ui.screen.dashboard.inventory
 import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.*
+import androidx.compose.foundation.lazy.grid.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.foundation.text.*
 import androidx.compose.material.icons.Icons
@@ -12,6 +12,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.*
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.vector.*
 import androidx.compose.ui.layout.*
@@ -24,40 +25,57 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.example.fruitsense.data.model.FruitItem
-import com.example.fruitsense.ui.theme.FruitSenseColors
+import com.example.fruitsense.data.model.RecipeItem
 
 @Composable
 fun InventoryScreen(
     onAnalyzeClick: (FruitItem) -> Unit,
+    onNavigateToRecipe: (RecipeItem) -> Unit,
     viewModel: InventoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val deleteMessage by viewModel.deleteMessage.collectAsState()
+    val updateMessage by viewModel.updateMessage.collectAsState()
     val selectedIds by viewModel.selectedIds.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
+    val isGenerating by viewModel.isGenerating.collectAsState()
 
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
-
     val isSelectionMode = selectedIds.isNotEmpty()
 
     val isAllSelected = if (uiState is InventoryUiState.Success) {
         selectedIds.containsAll((uiState as InventoryUiState.Success).data.map { it.id })
     } else false
 
-    // Initial Load
-    LaunchedEffect(Unit) {
-        viewModel.loadInventory()
-    }
+    var showEditStockDialog by remember { mutableStateOf(false) }
+    var fruitToEdit by remember { mutableStateOf<FruitItem?>(null) }
 
-    LaunchedEffect(deleteMessage) {
+    LaunchedEffect(Unit) { viewModel.loadInventory() }
+
+    LaunchedEffect(deleteMessage, updateMessage) {
         deleteMessage?.let {
             Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
             viewModel.clearDeleteMessage()
         }
+        updateMessage?.let {
+            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
+            viewModel.clearUpdateMessage()
+        }
     }
 
-    // Dialogs
+    if (showEditStockDialog && fruitToEdit != null) {
+        UpdateStockDialog(
+            fruit = fruitToEdit!!,
+            onDismiss = { showEditStockDialog = false },
+            onConfirm = { newQuantity, newName -> // Menerima quantity DAN name
+                viewModel.updateFruitStock(fruitToEdit!!.id, newQuantity, newName)
+                showEditStockDialog = false
+            }
+        )
+    }
+
+    // Delete Dialog
     var showDeleteDialog by remember { mutableStateOf(false) }
     if (showDeleteDialog) {
         AlertDialog(
@@ -65,389 +83,342 @@ fun InventoryScreen(
             title = { Text("Hapus ${selectedIds.size} Item?") },
             text = { Text("Item yang dipilih akan dihapus permanen.") },
             confirmButton = {
-                TextButton(
-                    onClick = {
-                        viewModel.deleteSelectedItems()
-                        showDeleteDialog = false
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Hapus") }
+                TextButton(onClick = { viewModel.deleteSelectedItems(); showDeleteDialog = false },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Hapus") }
             },
             dismissButton = { TextButton(onClick = { showDeleteDialog = false }) { Text("Batal") } }
         )
     }
 
-    var itemToDeleteSingle by remember { mutableStateOf<FruitItem?>(null) }
-    if (itemToDeleteSingle != null) {
-        AlertDialog(
-            onDismissRequest = { itemToDeleteSingle = null },
-            title = { Text("Hapus Item?") },
-            text = { Text("Hapus '${itemToDeleteSingle?.name}'?") },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        itemToDeleteSingle?.let { viewModel.deleteItem(it.id) }
-                        itemToDeleteSingle = null
-                    },
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-                ) { Text("Hapus") }
-            },
-            dismissButton = { TextButton(onClick = { itemToDeleteSingle = null }) { Text("Batal") } }
-        )
-    }
-
-    // [PERBAIKAN UTAMA] Menggunakan Scaffold
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0.dp),
         topBar = {
-            // Bungkus konten TopBar dalam Column agar background status bar konsisten
-            Column(
-                modifier = Modifier
-                    .background(MaterialTheme.colorScheme.background)
-                    .statusBarsPadding() // Padding status bar hanya di sini
-            ) {
-                // 1. Header Dinamis (Selection vs Normal)
+            Column(modifier = Modifier.background(MaterialTheme.colorScheme.background)) {
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isSelectionMode) {
-                        // Header Selection Mode
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = { viewModel.clearSelection() }) {
-                                Icon(Icons.Default.Close, contentDescription = "Batal")
-                            }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "${selectedIds.size} Dipilih",
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onBackground
-                            )
+                            IconButton(onClick = { viewModel.clearSelection() }) { Icon(Icons.Default.Close, "Batal") }
+                            Text("${selectedIds.size} Dipilih", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         }
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            TextButton(onClick = { viewModel.toggleSelectAll() }) {
-                                Text(if (isAllSelected) "Batal Semua" else "Pilih Semua")
-                            }
-                            IconButton(onClick = { showDeleteDialog = true }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Hapus", tint = MaterialTheme.colorScheme.error)
-                            }
+                        Row {
+                            TextButton(onClick = { viewModel.toggleSelectAll() }) { Text(if (isAllSelected) "Batal Semua" else "Pilih Semua") }
+                            IconButton(onClick = { showDeleteDialog = true }) { Icon(Icons.Default.Delete, "Hapus", tint = MaterialTheme.colorScheme.error) }
                         }
                     } else {
-                        // Header Normal
                         Column {
-                            Text(
-                                text = "Inventory Buah",
-                                fontSize = 24.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = FruitSenseColors.GreenDark
-                            )
-                            Text(
-                                text = "Kelola stok buah Anda",
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("Inventory", style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.primary)
+                            Text("Stok buah Anda", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Divider pemisah antara header dan list
-                if (!isSelectionMode) {
-                    HorizontalDivider(
-                        thickness = 1.dp,
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Jika BUKAN mode seleksi, tampilkan Search & Filter di bawah header
                 if (!isSelectionMode) {
                     Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-                        // [BARU] Search Bar
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { viewModel.onSearchQueryChanged(it) },
                             placeholder = { Text("Cari buah...") },
-                            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                            leadingIcon = { Icon(Icons.Default.Search, null) },
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = MaterialTheme.shapes.extraLarge,
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = FruitSenseColors.GreenDark,
-                                unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
-                            )
+                                focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                unfocusedBorderColor = MaterialTheme.colorScheme.outline
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
                         )
-
                         Spacer(modifier = Modifier.height(12.dp))
-
-                        // [BARU] Filter Chips (Sort)
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            FilterChipCustom(
-                                selected = false,
-                                onClick = { viewModel.onSortChanged("newest") },
-                                label = "Terbaru",
-                                icon = Icons.Default.Sort
-                            )
-                            FilterChipCustom(
-                                selected = false,
-                                onClick = { viewModel.onSortChanged("stock") },
-                                label = "Stok Terbanyak",
-                                icon = Icons.Default.Sort
-                            )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChipCustom(false, { viewModel.onSortChanged("newest") }, "Terbaru", Icons.Default.AccessTime)
+                            FilterChipCustom(false, { viewModel.onSortChanged("stock") }, "Stok", Icons.Default.Sort)
                         }
-
-                        Spacer(modifier = Modifier.height(12.dp))
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }
     ) { paddingValues ->
-        // [PERBAIKAN 2] Menggunakan paddingValues dari Scaffold dengan benar
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues) // Padding agar tidak tertutup TopBar
+        Box(modifier = Modifier
+            .fillMaxSize()
+            .padding(paddingValues)
+            .padding(vertical = 24.dp)
         ) {
             when (val state = uiState) {
-                is InventoryUiState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = FruitSenseColors.GreenDark)
-                    }
-                }
+                is InventoryUiState.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                is InventoryUiState.Error -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(state.message) }
+                is InventoryUiState.Empty -> EmptyState()
                 is InventoryUiState.Success -> {
-                    // [PERBAIKAN 3] Padding content dipindah ke LazyColumn contentPadding
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                    LazyVerticalGrid(
+                        columns = GridCells.Fixed(2),
+                        contentPadding = PaddingValues(start = 24.dp, end = 24.dp, bottom = 24.dp),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
-                        contentPadding = PaddingValues(
-                            top = 16.dp,
-                            bottom = 100.dp, // Space untuk BottomBar
-                            start = 24.dp,
-                            end = 24.dp
-                        )
+                        modifier = Modifier.fillMaxSize()
                     ) {
                         items(state.data, key = { it.id }) { fruit ->
-                            val isSelected = selectedIds.contains(fruit.id)
-
-                            FruitItemCardSelectable(
+                            FruitGridItem(
                                 fruit = fruit,
-                                isSelected = isSelected,
+                                isSelected = selectedIds.contains(fruit.id),
                                 isSelectionMode = isSelectionMode,
                                 viewModel = viewModel,
-                                onLongClick = { viewModel.toggleSelection(fruit.id) },
                                 onClick = {
-                                    if (isSelectionMode) {
-                                        viewModel.toggleSelection(fruit.id)
-                                    }
+                                    if (isSelectionMode) viewModel.toggleSelection(fruit.id)
                                 },
-                                onDeleteClick = { itemToDeleteSingle = fruit },
-                                onRecipeClick = { onAnalyzeClick(fruit) }
+                                onLongClick = { viewModel.toggleSelection(fruit.id) },
+                                onRecipeClick = {
+                                    viewModel.generateRecipeForFruit(
+                                        fruit = fruit,
+                                        onSuccess = { recipe ->
+                                            Toast.makeText(context, "Resep Berhasil Dibuat!", Toast.LENGTH_SHORT).show()
+                                            onNavigateToRecipe(recipe)
+                                        }
+                                    )
+                                },
+                                onEditStockClick = {
+                                    fruitToEdit = fruit
+                                    showEditStockDialog = true
+                                }
                             )
                         }
                     }
                 }
-                is InventoryUiState.Empty -> {
-                    EmptyState()
-                }
-                is InventoryUiState.Error -> {
-                    ErrorState(message = state.message, onRetry = { viewModel.loadInventory() })
+            }
+
+            // [LOADING OVERLAY] Muncul saat proses generate
+            if (isGenerating) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable(enabled = false) {},
+                    contentAlignment = Alignment.Center
+                ) {
+                    Card(
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(24.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Sedang Membuat Resep...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-// Helper Composable untuk Filter Chip (Sama seperti sebelumnya)
 @Composable
-fun FilterChipCustom(
-    selected: Boolean,
-    onClick: () -> Unit,
-    label: String,
-    icon: ImageVector
+fun UpdateStockDialog(
+    fruit: FruitItem,
+    onDismiss: () -> Unit,
+    onConfirm: (Int, String) -> Unit
 ) {
-    FilterChip(
-        selected = selected,
-        onClick = onClick,
-        label = { Text(label) },
-        leadingIcon = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(18.dp)
-            )
+    var quantityText by remember { mutableStateOf(fruit.stock?.toString() ?: "0") }
+    var nameText by remember { mutableStateOf(fruit.name) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Update Stok") },
+        text = {
+            Column {
+                Text("Edit detail item:", style = MaterialTheme.typography.bodyMedium)
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Input Nama
+                OutlinedTextField(
+                    value = nameText,
+                    onValueChange = { nameText = it },
+                    label = { Text("Nama Buah") },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.small
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Input Stok
+                OutlinedTextField(
+                    value = quantityText,
+                    onValueChange = { if (it.all { char -> char.isDigit() }) quantityText = it },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    label = { Text("Jumlah Stok") },
+                    singleLine = true,
+                    shape = MaterialTheme.shapes.small
+                )
+            }
         },
-        colors = FilterChipDefaults.filterChipColors(
-            selectedContainerColor = FruitSenseColors.GreenDark.copy(alpha = 0.2f),
-            selectedLabelColor = FruitSenseColors.GreenDark,
-            selectedLeadingIconColor = FruitSenseColors.GreenDark
-        )
+        confirmButton = {
+            Button(
+                onClick = {
+                    onConfirm(
+                        quantityText.toIntOrNull() ?: 0,
+                        nameText
+                    ) },
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                shape = MaterialTheme.shapes.extraLarge
+            ) {
+                Text("Simpan")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Batal") }
+        }
     )
 }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun FruitItemCardSelectable(
+fun FruitGridItem(
     fruit: FruitItem,
     isSelected: Boolean,
     isSelectionMode: Boolean,
     viewModel: InventoryViewModel,
-    onLongClick: () -> Unit,
     onClick: () -> Unit,
-    onDeleteClick: () -> Unit,
-    onRecipeClick: () -> Unit
+    onLongClick: () -> Unit,
+    onRecipeClick: () -> Unit,
+    onEditStockClick: () -> Unit
 ) {
-    val expiryInfo = remember(fruit.dateAdded, fruit.expiryDate) {
-        viewModel.calculateExpiry(fruit.dateAdded, fruit.expiryDate)
-    }
+    val expiryInfo = remember(fruit) { viewModel.calculateExpiry(fruit.dateAdded, fruit.expiryDate) }
 
-    val cardColor = if (isSelected) FruitSenseColors.GreenDark.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
-    val borderStroke = if (isSelected) BorderStroke(2.dp, FruitSenseColors.GreenDark) else null
-    val elevation = if (isSelected) 0.dp else 2.dp
+    val borderColor = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent
+    val containerColor = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) else MaterialTheme.colorScheme.surface
 
     Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor),
-        border = borderStroke,
-        elevation = CardDefaults.cardElevation(defaultElevation = elevation),
+        shape = MaterialTheme.shapes.medium,
+        colors = CardDefaults.cardColors(containerColor = containerColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = if (isSelected) BorderStroke(2.dp, borderColor) else null,
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(
-                onClick = onClick,
-                onLongClick = onLongClick
-            )
+            .aspectRatio(0.8f)
+            .clip(MaterialTheme.shapes.medium)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
     ) {
-        Box {
-            Row(
-                modifier = Modifier.padding(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                if (!fruit.imageUri.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = fruit.imageUri,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Outlined.Inventory2, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+
                 if (isSelectionMode) {
                     Checkbox(
                         checked = isSelected,
-                        onCheckedChange = { onClick() },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = FruitSenseColors.GreenDark,
-                            uncheckedColor = Color.Gray
-                        )
+                        onCheckedChange = null,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(4.dp),
+                        colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
                 }
 
-                Card(
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.size(80.dp)
+                Surface(
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.8f),
+                    shape = RoundedCornerShape(bottomEnd = 12.dp),
+                    modifier = Modifier.align(Alignment.TopStart)
                 ) {
-                    if (!fruit.imageUri.isNullOrEmpty()) {
-                        AsyncImage(
-                            model = fruit.imageUri,
-                            contentDescription = fruit.name,
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier.fillMaxSize().background(Color.Gray.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
+                    Text(
+                        text = fruit.grade ?: "?",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+            }
+
+            Column(modifier = Modifier.padding(12.dp)) {
+                // Baris Nama dan Edit Stok
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = fruit.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    // [BARU] Tombol Edit Stok
+                    if (!isSelectionMode) {
+                        IconButton(
+                            onClick = onEditStockClick,
+                            modifier = Modifier.size(24.dp)
                         ) {
-                            Icon(Icons.Outlined.Inventory2, null, tint = Color.Gray)
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Stok", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.width(16.dp))
+                Spacer(modifier = Modifier.height(4.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = fruit.name,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // STOK (Kiri)
+                    Text(
+                        text = "Stok: ${fruit.stock ?: 0}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontWeight = FontWeight.Medium
+                    )
 
-                        if (!isSelectionMode) {
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = FruitSenseColors.GreenDark.copy(alpha = 0.1f),
-                                modifier = Modifier.padding(end = 48.dp)
-                            ) {
-                                Text(
-                                    text = "${fruit.grade ?: "?"}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold,
-                                    color = FruitSenseColors.GreenDark,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    // EXPIRY (Kanan)
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.CalendarToday, null, tint = Color.Gray, modifier = Modifier.size(12.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = expiryInfo.formattedDate,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color.Gray
+                        Icon(
+                            imageVector = Icons.Outlined.Timer,
+                            contentDescription = "Expiry",
+                            tint = expiryInfo.statusColor,
+                            modifier = Modifier.size(14.dp)
                         )
-                    }
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Outlined.Timer, null, tint = expiryInfo.statusColor, modifier = Modifier.size(12.dp))
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = expiryInfo.statusText,
                             style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = expiryInfo.statusColor
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
-            }
 
-            if (!isSelectionMode) {
-                Column(
-                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    IconButton(onClick = onDeleteClick, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Hapus",
-                            tint = MaterialTheme.colorScheme.error.copy(alpha = 0.6f),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    IconButton(onClick = onRecipeClick, modifier = Modifier.size(32.dp)) {
-                        Icon(
-                            imageVector = Icons.Default.RestaurantMenu,
-                            contentDescription = "Resep",
-                            tint = FruitSenseColors.GreenDark,
-                            modifier = Modifier.size(20.dp)
-                        )
+                if (!isSelectionMode) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        onClick = onRecipeClick,
+                        modifier = Modifier.fillMaxWidth().height(32.dp),
+                        contentPadding = PaddingValues(0.dp),
+                        shape = MaterialTheme.shapes.small
+                    ) {
+                        Text("Resep", fontSize = 12.sp)
                     }
                 }
             }
@@ -455,28 +426,30 @@ fun FruitItemCardSelectable(
     }
 }
 
-// ErrorState & EmptyState (Sama)
 @Composable
-fun ErrorState(message: String, onRetry: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(48.dp))
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(text = message, color = MaterialTheme.colorScheme.onSurface)
-            Spacer(modifier = Modifier.height(16.dp))
-            Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = FruitSenseColors.GreenDark)) {
-                Text("Coba Lagi")
-            }
-        }
-    }
+fun FilterChipCustom(selected: Boolean, onClick: () -> Unit, label: String, icon: ImageVector) {
+    FilterChip(
+        selected = selected,
+        onClick = onClick,
+        label = { Text(label) },
+        leadingIcon = { Icon(icon, null, modifier = Modifier.size(16.dp)) },
+        colors = FilterChipDefaults.filterChipColors(
+            selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+        )
+    )
 }
 
 @Composable
 fun EmptyState() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Outlined.Inventory2, null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f))
-            Text("Belum ada buah", color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(Icons.Outlined.ShoppingBasket, null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.outline)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Inventory Kosong", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Mulai scan buah untuk mengisi stok", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
     }
 }

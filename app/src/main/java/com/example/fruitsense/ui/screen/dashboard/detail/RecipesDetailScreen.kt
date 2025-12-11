@@ -2,16 +2,22 @@ package com.example.fruitsense.ui.screen.dashboard.detail
 
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.*
-import androidx.compose.ui.text.font.*
-import androidx.compose.ui.text.style.*
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.fruitsense.data.model.RecipeItem
 import com.example.fruitsense.ui.theme.FruitSenseColors
 
@@ -22,6 +28,8 @@ fun RecipesDetailScreen(
     onBackClick: () -> Unit
 ) {
     val scrollState = rememberScrollState()
+
+    // Regex untuk memecah instruksi jika ada nomor (1. , 2. )
     val instructionRegex = Regex("(?=\\d+\\.\\s)")
     val instructionsList = recipe.instructions.split(instructionRegex)
         .map { it.trim() }
@@ -32,9 +40,9 @@ fun RecipesDetailScreen(
             CenterAlignedTopAppBar(
                 title = {
                     Text(
-                        "Detail Resep",
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 18.sp
+                        text = "Detail Resep",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleLarge
                     )
                 },
                 navigationIcon = {
@@ -48,139 +56,102 @@ fun RecipesDetailScreen(
                     navigationIconContentColor = MaterialTheme.colorScheme.onBackground
                 )
             )
-        }
+        },
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
                 .padding(paddingValues)
                 .verticalScroll(scrollState)
-                .padding(24.dp)
         ) {
-            // 1. Header: Judul Resep & Ikon
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            // 2. Content Info
+            Column(modifier = Modifier.padding(24.dp)) {
+                // Judul Resep
                 Text(
                     text = recipe.title,
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold,
-                    color = FruitSenseColors.GreenDark,
-                    textAlign = TextAlign.Center
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Info Waktu & Tingkat Kesulitan (Simulasi)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.Timer,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Waktu Membuat: ${recipe.cookingTime}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
+                // Ingredients Section
                 Text(
-                    text = "Waktu Membuat :",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 4.dp)
+                    text = "Bahan-bahan",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Menampilkan teks bahan-bahan apa adanya (raw string)
+                Text(
+                    text = recipe.ingredients,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    lineHeight = 26.sp
                 )
 
-                // Waktu Masak Badge
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.surfaceVariant,
-                    modifier = Modifier.padding(top = 8.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Outlined.Timer,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(16.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text(
-                            text = recipe.cookingTime,
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            fontWeight = FontWeight.Medium
-                        )
+                HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
+                // Instructions Section
+                Text(
+                    text = "Cara Membuat",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (instructionsList.size > 1) {
+                    instructionsList.forEach { step ->
+                        Row(verticalAlignment = Alignment.Top) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(top = 8.dp)
+                                    .size(8.dp)
+                                    .background(MaterialTheme.colorScheme.primary, CircleShape)
+                            )
+                            Spacer(modifier = Modifier.width(16.dp))
+                            Text(
+                                text = step,
+                                style = MaterialTheme.typography.bodyMedium,
+                                lineHeight = 24.sp,
+                                modifier = Modifier.padding(bottom = 12.dp)
+                            )
+                        }
                     }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // 2. Bahan-Bahan
-            SectionTitleDetail("Bahan-Bahan")
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
+                } else {
                     Text(
-                        text = recipe.ingredients,
+                        text = recipe.instructions,
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
                         lineHeight = 24.sp
                     )
                 }
+
+                Spacer(modifier = Modifier.height(40.dp))
             }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // 3. Cara Memasak
-            SectionTitleDetail("Cara Memasak")
-            Card(
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    // Jika regex berhasil memecah instruksi
-                    if (instructionsList.size > 1) {
-                        instructionsList.forEachIndexed { index, instruction ->
-                            // instruction sudah mengandung "1. blabla"
-                            Text(
-                                text = instruction,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                lineHeight = 22.sp,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-
-                            // Divider antar langkah (kecuali yang terakhir)
-                            if (index < instructionsList.lastIndex) {
-                                Divider(
-                                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.2f),
-                                    thickness = 1.dp,
-                                    modifier = Modifier.padding(vertical = 4.dp)
-                                )
-                            }
-                        }
-                    } else {
-                        // Fallback jika regex tidak memecah (tampilkan teks asli)
-                        Text(
-                            text = recipe.instructions,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            lineHeight = 24.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
-}
-
-@Composable
-fun SectionTitleDetail(text: String) {
-    Text(
-        text = text,
-        style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
-        color = FruitSenseColors.GreenDark,
-        modifier = Modifier.padding(bottom = 8.dp)
-    )
 }

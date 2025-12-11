@@ -12,14 +12,12 @@ enum class AppScreen {
     ResetPasswordSuccess,
 
     // Fitur Dashboard
-    FruitDetail,
-    FruitAnalysis,
     Recipes,
     RecipeDetail,
 
     // Fitur Scan
     ScanCamera,
     ScanPreview,
-    ScanProcessing, // [BARU] State sementara saat analisa kamera
+    ScanProcessing,
     ScanResult
 }

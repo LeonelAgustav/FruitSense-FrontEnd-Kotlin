@@ -1,19 +1,23 @@
 package com.example.fruitsense.ui.screen.dashboard
 
 import android.net.Uri
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Camera
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.fruitsense.data.model.*
 import com.example.fruitsense.ui.components.BottomNavigationBar
-import com.example.fruitsense.ui.screen.dashboard.recipes.RecipesScreen
 import com.example.fruitsense.ui.screen.dashboard.history.HistoryScreen
 import com.example.fruitsense.ui.screen.dashboard.inventory.InventoryScreen
 import com.example.fruitsense.ui.screen.dashboard.profile.ProfileScreen
+import com.example.fruitsense.ui.screen.dashboard.recipes.RecipesScreen
 import com.example.fruitsense.ui.screen.dashboard.scan.ScanHubScreen
 
 @Composable
@@ -22,55 +26,46 @@ fun DashboardScreen(
     onTabChange: (Int) -> Unit,
     onLogoutClick: () -> Unit,
     onAnalyzeClick: (FruitItem) -> Unit,
-    onRecipeClick: (RecipeItem) -> Unit,
+    onRecipeClick: (RecipeItem) -> Unit, // Callback navigasi resep
     onOpenCamera: () -> Unit,
     onGallerySelected: (Uri) -> Unit
 ) {
-    val showBottomBar by remember { mutableStateOf(true) }
+    val showFab = currentTab != 0 && currentTab != 4
 
-    Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(bottom = if (showBottomBar) 100.dp else 0.dp)
-                .navigationBarsPadding()
-        ) {
-            when (currentTab) {
-                0 -> { // Scan
-                    ScanHubScreen(
-                        onBukaKameraClick = onOpenCamera,
-                        onImageSelected = onGallerySelected
-                    )
-                }
-                1 -> { // Inventory
-                    InventoryScreen(
-                        onAnalyzeClick = onAnalyzeClick
-                    )
-                }
-                2 -> { // Recipes
-                    RecipesScreen(
-                        onBackClick = { onTabChange(0) },
-                        onRecipeClick = onRecipeClick
-                    )
-                }
-                3 -> { // History
-                    HistoryScreen()
-                }
-                4 -> { // Profile
-                    ProfileScreen(onLogout = onLogoutClick)
-                }
-            }
-        }
-
-        Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
             BottomNavigationBar(
                 selectedTab = currentTab,
                 onTabSelected = onTabChange
             )
+        },
+        floatingActionButton = {
+            if (showFab) {
+                FloatingActionButton(
+                    onClick = onOpenCamera,
+                    shape = CircleShape,
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.size(64.dp)
+                ) {
+                    Icon(Icons.Default.Camera, "Quick Scan", modifier = Modifier.size(32.dp))
+                }
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End
+    ) { innerPadding ->
+        Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+            when (currentTab) {
+                0 -> ScanHubScreen(onBukaKameraClick = onOpenCamera, onImageSelected = onGallerySelected)
+                1 -> InventoryScreen(
+                    onAnalyzeClick = onAnalyzeClick,
+                    onNavigateToRecipe = onRecipeClick
+                )
+                2 -> RecipesScreen(onBackClick = { onTabChange(0) }, onRecipeClick = onRecipeClick)
+                3 -> HistoryScreen()
+                4 -> ProfileScreen(onLogout = onLogoutClick)
+            }
         }
     }
 }

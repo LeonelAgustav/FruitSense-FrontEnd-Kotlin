@@ -10,31 +10,32 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.rememberAsyncImagePainter
 import com.example.fruitsense.data.model.FruitItem
-import com.example.fruitsense.ui.theme.FruitSenseColors
 
 @Composable
 fun PreviewScreen(
     imageUri: Uri,
     onRetake: () -> Unit,
     onAnalysisSuccess: (FruitItem) -> Unit,
-    viewModel: ScanViewModel = hiltViewModel() // Inject ViewModel
+    viewModel: ScanViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    // Handle State Change
     LaunchedEffect(uiState) {
         if (uiState is ScanUiState.Success) {
             onAnalysisSuccess((uiState as ScanUiState.Success).fruitItem)
-            viewModel.resetState() // Reset agar tidak trigger lagi saat back
+            // [FIX] JANGAN reset state di sini!
+            // Biarkan state tetap Success agar ResultScreen bisa membacanya.
+            // viewModel.resetState() <--- HAPUS BARIS INI
         }
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        // Gambar Full Screen
+        // Image
         Image(
             painter = rememberAsyncImagePainter(imageUri),
             contentDescription = "Preview",
@@ -42,55 +43,47 @@ fun PreviewScreen(
             contentScale = ContentScale.Fit
         )
 
-        // Loading Indicator Overlay
+        // Loading Overlay
         if (uiState is ScanUiState.Loading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f)),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator(color = FruitSenseColors.GreenDark)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(0.6f)), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         } else {
-            // Bottom Actions
+            // Action Bar (Bottom)
             Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth(),
+                modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
                 color = MaterialTheme.colorScheme.surface,
                 shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
             ) {
                 Row(
                     modifier = Modifier.padding(24.dp),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    OutlinedButton(
-                        onClick = onRetake,
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Ulang")
+                    TextButton(onClick = onRetake) {
+                        Text("Ambil Ulang", color = MaterialTheme.colorScheme.error)
                     }
+
                     Button(
                         onClick = { viewModel.analyzeImage(imageUri) },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = FruitSenseColors.GreenDark)
+                        shape = MaterialTheme.shapes.extraLarge,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.height(50.dp).padding(start = 16.dp)
                     ) {
-                        Text("Analisa", color = Color.White)
+                        Text("Analisa Sekarang", fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
-        // Error Message
+        // Error Feedback
         if (uiState is ScanUiState.Error) {
-            // Tampilkan Snackbar atau Text Error sederhana
-            val errorMsg = (uiState as ScanUiState.Error).message
-            Text(
-                text = errorMsg,
-                color = Color.Red,
-                modifier = Modifier.align(Alignment.Center).background(Color.White)
-            )
+            Snackbar(
+                modifier = Modifier.align(Alignment.TopCenter).padding(16.dp).statusBarsPadding(),
+                containerColor = MaterialTheme.colorScheme.error
+            ) {
+                Text((uiState as ScanUiState.Error).message, color = Color.White)
+            }
         }
     }
 }

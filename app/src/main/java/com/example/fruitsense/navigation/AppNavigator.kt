@@ -30,9 +30,11 @@ fun AppNavigator() {
     var selectedRecipeItem by remember { mutableStateOf<RecipeItem?>(null) }
 
     var scanUri by remember { mutableStateOf<Uri?>(null) }
+
     val scanViewModel: ScanViewModel = hiltViewModel()
     val scanUiState by scanViewModel.uiState.collectAsState()
 
+    // Logic pindah layar otomatis jika scan sukses
     LaunchedEffect(scanUiState) {
         if (currentScreen == AppScreen.ScanProcessing) {
             if (scanUiState is ScanUiState.Success) {
@@ -45,6 +47,7 @@ fun AppNavigator() {
     val isLogin = currentScreen == AppScreen.Login
     val isSplash = currentScreen == AppScreen.Splash
 
+    // Manual Back Button Handling
     BackHandler(enabled = !isLogin && !isSplash) {
         if (isDashboard) {
             if (dashboardTab != 0) dashboardTab = 0
@@ -53,7 +56,6 @@ fun AppNavigator() {
                 AppScreen.ScanCamera -> AppScreen.Dashboard
                 AppScreen.ScanPreview -> AppScreen.ScanCamera
                 AppScreen.ScanResult -> AppScreen.Dashboard
-                AppScreen.FruitAnalysis -> AppScreen.Dashboard
                 AppScreen.Recipes -> AppScreen.Dashboard
                 AppScreen.RecipeDetail -> AppScreen.Dashboard
 
@@ -66,6 +68,7 @@ fun AppNavigator() {
         }
     }
 
+    // Routing Layar
     when (currentScreen) {
         AppScreen.Splash -> SplashScreen(
             onNavigateToDashboard = { currentScreen = AppScreen.Dashboard },
@@ -137,20 +140,18 @@ fun AppNavigator() {
                 currentTab = dashboardTab,
                 onTabChange = { dashboardTab = it },
                 onLogoutClick = { currentScreen = AppScreen.Login },
-                // [MODIFIKASI] Saat tombol Resep di Inventory diklik:
                 onAnalyzeClick = { fruit ->
                     selectedFruitItem = fruit
-                    autoGenerateRecipes = true // Aktifkan flag auto-generate
-                    currentScreen = AppScreen.FruitAnalysis
+                    autoGenerateRecipes = true
                 },
                 onOpenCamera = { currentScreen = AppScreen.ScanCamera },
                 onGallerySelected = { uri ->
                     scanUri = uri
-                    currentScreen = AppScreen.ScanPreview // Galeri tetap ke Preview
+                    currentScreen = AppScreen.ScanPreview
                 },
                 onRecipeClick = { recipe ->
                     selectedRecipeItem = recipe
-                    currentScreen = AppScreen.RecipeDetail // Pindah ke Detail Resep
+                    currentScreen = AppScreen.RecipeDetail
                 }
             )
         }
@@ -174,7 +175,7 @@ fun AppNavigator() {
                     onAnalysisSuccess = { result ->
                         currentScreen = AppScreen.ScanResult
                     },
-                    viewModel = scanViewModel // Pass shared VM
+                    viewModel = scanViewModel
                 )
             }
         }
@@ -184,36 +185,28 @@ fun AppNavigator() {
                 modifier = Modifier.fillMaxSize().background(Color.Black),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = FruitSenseColors.GreenDark)
+                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
             }
         }
 
         AppScreen.ScanResult -> {
-            // Ambil data dari ViewModel state
             val state = scanUiState
             if (state is ScanUiState.Success) {
                 ResultScreen(
                     resultData = state.fruitItem,
-                    onScanAgain = { dashboardTab = 0; currentScreen = AppScreen.Dashboard; scanViewModel.resetState() },
-                    onSaveToInventory = { dashboardTab = 1; currentScreen = AppScreen.Dashboard; scanViewModel.resetState() }
+                    onScanAgain = {
+                        dashboardTab = 0
+                        currentScreen = AppScreen.Dashboard
+                        scanViewModel.resetState()
+                    },
+                    onSaveToInventory = {
+                        dashboardTab = 1
+                        currentScreen = AppScreen.Dashboard
+                        scanViewModel.resetState()
+                    }
                 )
             } else {
-                // Fallback jika error atau idle (harusnya tidak masuk sini jika logic benar)
-                // Bisa redirect balik ke Dashboard
                 LaunchedEffect(Unit) { currentScreen = AppScreen.Dashboard }
-            }
-        }
-
-        AppScreen.FruitAnalysis -> {
-            selectedFruitItem?.let {
-                FruitAnalysisScreen(
-                    fruitItem = it,
-                    onBackClick = { currentScreen = AppScreen.Dashboard },
-                    autoGenerate = autoGenerateRecipes // [BARU] Kirim parameter ini
-                )
-                SideEffect {
-                    autoGenerateRecipes = false
-                }
             }
         }
 
@@ -222,20 +215,21 @@ fun AppNavigator() {
                 onBackClick = { currentScreen = AppScreen.Dashboard },
                 onRecipeClick = { recipe ->
                     selectedRecipeItem = recipe
-                    currentScreen = AppScreen.RecipeDetail // Pindah ke Detail Resep
+                    currentScreen = AppScreen.RecipeDetail
                 }
             )
         }
 
-        // [BARU] Screen Detail Resep
         AppScreen.RecipeDetail -> {
             selectedRecipeItem?.let { recipe ->
                 RecipesDetailScreen(
                     recipe = recipe,
-                    onBackClick = { currentScreen = AppScreen.Recipes }
+                    onBackClick = { currentScreen = AppScreen.Dashboard }
                 )
             }
         }
+
+        // Tetap tambahkan else untuk keamanan jika enum bertambah di masa depan
         else -> {
             LaunchedEffect(Unit) { currentScreen = AppScreen.Dashboard }
         }
