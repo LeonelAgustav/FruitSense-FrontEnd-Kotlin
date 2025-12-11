@@ -1,4 +1,4 @@
-package com.example.fruitsense
+package com.fruitsense.app
 
 import org.junit.Test
 

@@ -5,14 +5,15 @@ plugins {
     id("kotlin-parcelize")
     id("com.google.dagger.hilt.android")
     id("kotlin-kapt")
+    id("com.google.gms.google-services")
 }
 
 android {
-    namespace = "com.example.fruitsense"
+    namespace = "com.fruitsense.app"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.fruitsense"
+        applicationId = "com.fruitsense.app"
         minSdk = 26
         targetSdk = 36
         versionCode = 1
@@ -115,4 +116,6 @@ dependencies {
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+
+    implementation("com.google.firebase:firebase-messaging:23.4.0")
 }
