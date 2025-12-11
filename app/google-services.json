@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "423641873417",
+    "project_id": "fruitsense-fcm-service",
+    "storage_bucket": "fruitsense-fcm-service.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:423641873417:android:79905671167899f4eaccd8",
+        "android_client_info": {
+          "package_name": "com.fruitsense.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAuDBqpNYsT8vKsK4tgUTwK0FMyTd90lRE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
